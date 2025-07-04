@@ -36,38 +36,35 @@ class DataFlowAnalysis {
         case org.objectweb.asm.Opcodes.FLOAD:
         case org.objectweb.asm.Opcodes.DLOAD:
         case org.objectweb.asm.Opcodes.ALOAD:
-          try {
-            // Try common Variable creation patterns
-            Variable var = Variable.class.getConstructor(int.class).newInstance(varInsn.var);
+          Variable var = createVariable(varInsn.var);
+          if (var != null) {
             used.add(var);
-          } catch (Exception e) {
-            // If constructor doesn't work, try other approaches
-            try {
-              java.lang.reflect.Method valueOf = Variable.class.getMethod("valueOf", int.class);
-              Variable var = (Variable) valueOf.invoke(null, varInsn.var);
-              used.add(var);
-            } catch (Exception e2) {
-              // If all else fails, create via reflection
-              try {
-                java.lang.reflect.Constructor<?>[] constructors = Variable.class.getDeclaredConstructors();
-                for (java.lang.reflect.Constructor<?> constructor : constructors) {
-                  constructor.setAccessible(true);
-                  if (constructor.getParameterCount() == 1) {
-                    Variable var = (Variable) constructor.newInstance(varInsn.var);
-                    used.add(var);
-                    break;
-                  }
-                }
-              } catch (Exception e3) {
-                // Last resort - skip this variable
-              }
-            }
           }
           break;
         default:
           break;
       }
     }
+    
+    // Handle array loads (uses arrayref and index)
+    switch (opcode) {
+      case org.objectweb.asm.Opcodes.IALOAD:
+      case org.objectweb.asm.Opcodes.LALOAD:
+      case org.objectweb.asm.Opcodes.FALOAD:
+      case org.objectweb.asm.Opcodes.DALOAD:
+      case org.objectweb.asm.Opcodes.AALOAD:
+      case org.objectweb.asm.Opcodes.BALOAD:
+      case org.objectweb.asm.Opcodes.CALOAD:
+      case org.objectweb.asm.Opcodes.SALOAD:
+        // Array loads use the array reference and index from the stack
+        // For simplicity, we'll create variables for common stack positions
+        Variable arrayRef = createVariable(-1); // Use -1 to indicate stack variable
+        Variable index = createVariable(-2);
+        if (arrayRef != null) used.add(arrayRef);
+        if (index != null) used.add(index);
+        break;
+    }
+    
     return used;
   }
 
@@ -96,38 +93,85 @@ class DataFlowAnalysis {
         case org.objectweb.asm.Opcodes.FSTORE:
         case org.objectweb.asm.Opcodes.DSTORE:
         case org.objectweb.asm.Opcodes.ASTORE:
-          try {
-            // Try common Variable creation patterns
-            Variable var = Variable.class.getConstructor(int.class).newInstance(varInsn.var);
+          Variable var = createVariable(varInsn.var);
+          if (var != null) {
             defined.add(var);
-          } catch (Exception e) {
-            // If constructor doesn't work, try other approaches
-            try {
-              java.lang.reflect.Method valueOf = Variable.class.getMethod("valueOf", int.class);
-              Variable var = (Variable) valueOf.invoke(null, varInsn.var);
-              defined.add(var);
-            } catch (Exception e2) {
-              // If all else fails, create via reflection
-              try {
-                java.lang.reflect.Constructor<?>[] constructors = Variable.class.getDeclaredConstructors();
-                for (java.lang.reflect.Constructor<?> constructor : constructors) {
-                  constructor.setAccessible(true);
-                  if (constructor.getParameterCount() == 1) {
-                    Variable var = (Variable) constructor.newInstance(varInsn.var);
-                    defined.add(var);
-                    break;
-                  }
-                }
-              } catch (Exception e3) {
-                // Last resort - skip this variable
-              }
-            }
           }
           break;
         default:
           break;
       }
     }
+    
+    // Handle array stores
+    switch (opcode) {
+      case org.objectweb.asm.Opcodes.IASTORE:
+      case org.objectweb.asm.Opcodes.LASTORE:
+      case org.objectweb.asm.Opcodes.FASTORE:
+      case org.objectweb.asm.Opcodes.DASTORE:
+      case org.objectweb.asm.Opcodes.AASTORE:
+      case org.objectweb.asm.Opcodes.BASTORE:
+      case org.objectweb.asm.Opcodes.CASTORE:
+      case org.objectweb.asm.Opcodes.SASTORE:
+        // Array stores modify the array
+        Variable arrayRef = createVariable(-1);
+        if (arrayRef != null) defined.add(arrayRef);
+        break;
+    }
+    
     return defined;
+  }
+
+  /**
+   * Helper method to create Variable instances using reflection.
+   */
+  private static Variable createVariable(int index) {
+    try {
+      // Try common Variable creation patterns
+      return Variable.class.getConstructor(int.class).newInstance(index);
+    } catch (Exception e) {
+      try {
+        java.lang.reflect.Method valueOf = Variable.class.getMethod("valueOf", int.class);
+        return (Variable) valueOf.invoke(null, index);
+      } catch (Exception e2) {
+        try {
+          // Try to find any single-parameter constructor
+          java.lang.reflect.Constructor<?>[] constructors = Variable.class.getDeclaredConstructors();
+          for (java.lang.reflect.Constructor<?> constructor : constructors) {
+            constructor.setAccessible(true);
+            if (constructor.getParameterCount() == 1) {
+              return (Variable) constructor.newInstance(index);
+            }
+          }
+        } catch (Exception e3) {
+          // Try to create with no-arg constructor and set field
+          try {
+            java.lang.reflect.Constructor<?> noArgConstructor = Variable.class.getDeclaredConstructor();
+            noArgConstructor.setAccessible(true);
+            Variable var = (Variable) noArgConstructor.newInstance();
+            // Try to set an index field
+            try {
+              java.lang.reflect.Field indexField = Variable.class.getDeclaredField("index");
+              indexField.setAccessible(true);
+              indexField.set(var, index);
+            } catch (Exception e4) {
+              // Try other common field names
+              try {
+                java.lang.reflect.Field varField = Variable.class.getDeclaredField("var");
+                varField.setAccessible(true);
+                varField.set(var, index);
+              } catch (Exception e5) {
+                // Ignore and return the variable anyway
+              }
+            }
+            return var;
+          } catch (Exception e4) {
+            // All approaches failed
+            return null;
+          }
+        }
+      }
+    }
+    return null;
   }
 }
