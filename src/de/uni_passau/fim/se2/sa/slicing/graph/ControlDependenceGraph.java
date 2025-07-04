@@ -32,36 +32,27 @@ public class ControlDependenceGraph extends Graph {
     PostDominatorTree pdt = new PostDominatorTree(cfg);
     ProgramGraph postDomTree = pdt.computeResult();
 
-    // Step 2: Compute post-dominator sets for each node
-    // use a map: node -> set of post-dominators
-    var postDominators = new java.util.HashMap<de.uni_passau.fim.se2.sa.slicing.cfg.Node, java.util.Set<de.uni_passau.fim.se2.sa.slicing.cfg.Node>>();
+    // Step 2: Compute immediate post-dominator for each node
     var nodes = cfg.getNodes();
+    var ipdom = new java.util.HashMap<de.uni_passau.fim.se2.sa.slicing.cfg.Node, de.uni_passau.fim.se2.sa.slicing.cfg.Node>();
     for (var node : nodes) {
-      postDominators.put(node, new java.util.HashSet<>());
-    }
-    // For each node, traverse up the post-dominator tree to collect all post-dominators
-    for (var node : nodes) {
-      var current = node;
-      while (true) {
-        postDominators.get(node).add(current);
-        var parents = postDomTree.getPredecessors(current);
-        if (parents.isEmpty()) break;
-        // In a tree, there should be only one parent
-        current = parents.iterator().next();
+      var preds = postDomTree.getPredecessors(node);
+      if (!preds.isEmpty()) {
+        ipdom.put(node, preds.iterator().next()); // Only one parent in tree
       }
     }
 
-    // Step 3: Build the control dependence graph
+    // Step 3: Build the control dependence graph using the standard algorithm
     ProgramGraph cdg = new ProgramGraph();
     for (var node : nodes) {
       cdg.addNode(node);
     }
     for (var a : nodes) {
       for (var b : cfg.getSuccessors(a)) {
-        // For each node x in the CFG, for each successor y,
-        // if x does not post-dominate y, then y is control dependent on x
-        if (!postDominators.get(b).contains(a)) {
-          cdg.addEdge(a, b);
+        var s = b;
+        while (s != null && s != ipdom.get(a)) {
+          cdg.addEdge(a, s);
+          s = ipdom.get(s);
         }
       }
     }
