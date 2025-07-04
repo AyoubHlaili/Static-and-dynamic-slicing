@@ -4,6 +4,7 @@ import com.google.errorprone.annotations.Var;
 import de.uni_passau.fim.se2.sa.slicing.cfg.CFGExtractor;
 import de.uni_passau.fim.se2.sa.slicing.cfg.Node;
 import de.uni_passau.fim.se2.sa.slicing.cfg.ProgramGraph;
+
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
@@ -84,4 +85,12 @@ public abstract class Graph {
 
         return reversedGraph;
   }
+  //Given a ProgramGraph pGraph with edges like:
+  //A → B
+  //B → C
+  //You want to return a new ProgramGraph with reversed edges:
+  //B → A
+  //C → B
+
+
 }
