@@ -111,65 +111,57 @@ public class PostDominatorTree extends Graph {
     
     // Build the dominator tree
     var dominatorTree = new ProgramGraph();
-    
-    // Add all nodes to the tree
     for (var node : nodes) {
       dominatorTree.addNode(node);
     }
-    
-    // Add edges: for each node, find its immediate dominator
+
+    // Map each node to its immediate dominator
+    var immediateDominators = new java.util.HashMap<Node, Node>();
     for (var node : nodes) {
-      if (node.equals(entry)) {
-        continue;
-      }
-      
+      if (node.equals(entry)) continue;
       var nodeDominators = dominators.get(node);
-      var immediateDominator = findImmediateDominator(node, nodeDominators);
-      
-      if (immediateDominator != null) {
-        dominatorTree.addEdge(immediateDominator, node);
+      var immDom = findImmediateDominator(node, nodeDominators, dominators);
+      if (immDom != null) {
+        immediateDominators.put(node, immDom);
       }
     }
-    
+
+    // For each dominator, add edges to all nodes it immediately dominates
+    for (var node : nodes) {
+      for (var entrySet : immediateDominators.entrySet()) {
+        if (entrySet.getValue().equals(node)) {
+          dominatorTree.addEdge(node, entrySet.getKey());
+        }
+      }
+    }
     return dominatorTree;
   }
-  
+
   /**
    * Finds the immediate dominator of a node from its dominator set.
-   * 
    * @param node The node to find immediate dominator for
    * @param dominators The set of all dominators of the node
+   * @param allDominators The map of all nodes to their dominator sets
    * @return The immediate dominator, or null if none found
    */
-  private Node findImmediateDominator(
-      Node node, 
-      java.util.Set<Node> dominators) {
-    
-    // Remove the node itself from dominators
+  private Node findImmediateDominator(Node node, java.util.Set<Node> dominators, java.util.Map<Node, java.util.Set<Node>> allDominators) {
     var candidates = new java.util.HashSet<>(dominators);
     candidates.remove(node);
-    
-    if (candidates.isEmpty()) {
-      return null;
-    }
-    
-    // The immediate dominator is the one that is not dominated by any other candidate
+    Node immDom = null;
     for (var candidate : candidates) {
-      boolean isImmediate = true;
-      
+      boolean isImm = true;
       for (var other : candidates) {
-        if (!candidate.equals(other) && dominates(other, candidate, dominators)) {
-          isImmediate = false;
+        if (!candidate.equals(other) && allDominators.get(other).contains(candidate)) {
+          isImm = false;
           break;
         }
       }
-      
-      if (isImmediate) {
-        return candidate;
+      if (isImm) {
+        immDom = candidate;
+        break;
       }
     }
-    
-    return null;
+    return immDom;
   }
   
   /**
