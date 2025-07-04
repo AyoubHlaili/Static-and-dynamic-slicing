@@ -23,26 +23,8 @@ class DataFlowAnalysis {
   static Collection<Variable> usedBy(
       String pOwningClass, MethodNode pMethodNode, AbstractInsnNode pInstruction)
       throws AnalyzerException {
-    java.util.List<Variable> used = new java.util.ArrayList<>();
-    int opcode = pInstruction.getOpcode();
-    if (opcode == -1) return used; // Not an instruction
-
-    // Handle local variable loads
-    if (pInstruction instanceof org.objectweb.asm.tree.VarInsnNode) {
-      org.objectweb.asm.tree.VarInsnNode varInsn = (org.objectweb.asm.tree.VarInsnNode) pInstruction;
-      switch (opcode) {
-        case org.objectweb.asm.Opcodes.ILOAD:
-        case org.objectweb.asm.Opcodes.LLOAD:
-        case org.objectweb.asm.Opcodes.FLOAD:
-        case org.objectweb.asm.Opcodes.DLOAD:
-        case org.objectweb.asm.Opcodes.ALOAD:
-          used.add((Variable) (Object) Integer.valueOf(varInsn.var)); // fallback: use index as variable
-          break;
-        default:
-          break;
-      }
-    }
-    return used;
+    // TODO: Implement proper Variable instantiation once the correct constructor is known
+    return java.util.Collections.emptyList();
   }
 
   /**
@@ -57,25 +39,7 @@ class DataFlowAnalysis {
   static Collection<Variable> definedBy(
       String pOwningClass, MethodNode pMethodNode, AbstractInsnNode pInstruction)
       throws AnalyzerException {
-    java.util.List<Variable> defined = new java.util.ArrayList<>();
-    int opcode = pInstruction.getOpcode();
-    if (opcode == -1) return defined; // Not an instruction
-
-    // Handle local variable stores
-    if (pInstruction instanceof org.objectweb.asm.tree.VarInsnNode) {
-      org.objectweb.asm.tree.VarInsnNode varInsn = (org.objectweb.asm.tree.VarInsnNode) pInstruction;
-      switch (opcode) {
-        case org.objectweb.asm.Opcodes.ISTORE:
-        case org.objectweb.asm.Opcodes.LSTORE:
-        case org.objectweb.asm.Opcodes.FSTORE:
-        case org.objectweb.asm.Opcodes.DSTORE:
-        case org.objectweb.asm.Opcodes.ASTORE:
-          defined.add((Variable) (Object) Integer.valueOf(varInsn.var)); // fallback: use index as variable
-          break;
-        default:
-          break;
-      }
-    }
-    return defined;
+    // TODO: Implement proper Variable instantiation once the correct constructor is known
+    return java.util.Collections.emptyList();
   }
 }
