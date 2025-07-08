@@ -127,15 +127,11 @@ class DataFlowAnalysis {
    */
   private static Variable createVariable(int index) {
     try {
-      // Variable is abstract, but we can use VariableImpl
-      // We need to create a Type for the variable - use int type for simplicity
+      // VariableImpl(int index, Type type)
       org.objectweb.asm.Type intType = org.objectweb.asm.Type.INT_TYPE;
-      
-      // Try to find VariableImpl class
       Class<?> variableImplClass = Class.forName("br.usp.each.saeg.asm.defuse.VariableImpl");
-      java.lang.reflect.Constructor<?> constructor = variableImplClass.getConstructor(org.objectweb.asm.Type.class);
-      
-      return (Variable) constructor.newInstance(intType);
+      java.lang.reflect.Constructor<?> constructor = variableImplClass.getConstructor(int.class, org.objectweb.asm.Type.class);
+      return (Variable) constructor.newInstance(index, intType);
     } catch (Exception e) {
       throw new RuntimeException("Failed to create Variable instance for index " + index, e);
     }
