@@ -123,60 +123,19 @@ class DataFlowAnalysis {
   }
 
   /**
-   * Helper method to create Variable instances using reflection.
+   * Helper method to create Variable instances.
    */
   private static Variable createVariable(int index) {
     try {
-      // Try various common patterns for Variable creation
+      // Variable is abstract, but we can use VariableImpl
+      // We need to create a Type for the variable - use int type for simplicity
+      org.objectweb.asm.Type intType = org.objectweb.asm.Type.INT_TYPE;
       
-      // Pattern 1: Static valueOf method
-      try {
-        java.lang.reflect.Method valueOf = Variable.class.getMethod("valueOf", int.class);
-        return (Variable) valueOf.invoke(null, index);
-      } catch (NoSuchMethodException e) { /* continue */ }
+      // Try to find VariableImpl class
+      Class<?> variableImplClass = Class.forName("br.usp.each.saeg.asm.defuse.VariableImpl");
+      java.lang.reflect.Constructor<?> constructor = variableImplClass.getConstructor(org.objectweb.asm.Type.class);
       
-      // Pattern 2: Static get method  
-      try {
-        java.lang.reflect.Method get = Variable.class.getMethod("get", int.class);
-        return (Variable) get.invoke(null, index);
-      } catch (NoSuchMethodException e) { /* continue */ }
-      
-      // Pattern 3: Static of method
-      try {
-        java.lang.reflect.Method of = Variable.class.getMethod("of", int.class);
-        return (Variable) of.invoke(null, index);
-      } catch (NoSuchMethodException e) { /* continue */ }
-      
-      // Pattern 4: Constructor with int
-      try {
-        java.lang.reflect.Constructor<?> constructor = Variable.class.getConstructor(int.class);
-        return (Variable) constructor.newInstance(index);
-      } catch (NoSuchMethodException e) { /* continue */ }
-      
-      // Pattern 5: Try all declared constructors and methods
-      for (java.lang.reflect.Constructor<?> constructor : Variable.class.getDeclaredConstructors()) {
-        constructor.setAccessible(true);
-        if (constructor.getParameterCount() == 1) {
-          Class<?> paramType = constructor.getParameterTypes()[0];
-          if (paramType == int.class || paramType == Integer.class) {
-            return (Variable) constructor.newInstance(index);
-          }
-        }
-      }
-      
-      for (java.lang.reflect.Method method : Variable.class.getDeclaredMethods()) {
-        if (java.lang.reflect.Modifier.isStatic(method.getModifiers()) && 
-            method.getReturnType() == Variable.class &&
-            method.getParameterCount() == 1) {
-          Class<?> paramType = method.getParameterTypes()[0];
-          if (paramType == int.class || paramType == Integer.class) {
-            method.setAccessible(true);
-            return (Variable) method.invoke(null, index);
-          }
-        }
-      }
-      
-      throw new RuntimeException("No suitable constructor or factory method found for Variable");
+      return (Variable) constructor.newInstance(intType);
     } catch (Exception e) {
       throw new RuntimeException("Failed to create Variable instance for index " + index, e);
     }
