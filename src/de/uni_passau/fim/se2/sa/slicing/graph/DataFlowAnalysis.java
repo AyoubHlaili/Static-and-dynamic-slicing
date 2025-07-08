@@ -4,7 +4,9 @@ import br.usp.each.saeg.asm.defuse.Variable;
 import java.util.Collection;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.LocalVariableNode;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
+import org.objectweb.asm.Type;
 
 /** Provides a simple data-flow analysis. */
 class DataFlowAnalysis {
@@ -36,7 +38,7 @@ class DataFlowAnalysis {
         case org.objectweb.asm.Opcodes.FLOAD:
         case org.objectweb.asm.Opcodes.DLOAD:
         case org.objectweb.asm.Opcodes.ALOAD:
-          Variable var = createVariable(varInsn.var);
+          Variable var = createVariable(pMethodNode, varInsn.var);
           if (var != null) {
             used.add(var);
           }
@@ -45,7 +47,6 @@ class DataFlowAnalysis {
           break;
       }
     }
-    
     // Handle array loads (uses arrayref and index)
     switch (opcode) {
       case org.objectweb.asm.Opcodes.IALOAD:
@@ -56,15 +57,12 @@ class DataFlowAnalysis {
       case org.objectweb.asm.Opcodes.BALOAD:
       case org.objectweb.asm.Opcodes.CALOAD:
       case org.objectweb.asm.Opcodes.SALOAD:
-        // Array loads use the array reference and index from the stack
-        // For simplicity, we'll create variables for common stack positions
-        Variable arrayRef = createVariable(-1); // Use -1 to indicate stack variable
-        Variable index = createVariable(-2);
+        Variable arrayRef = createVariable(pMethodNode, -1); // Use -1 to indicate stack variable
+        Variable index = createVariable(pMethodNode, -2);
         if (arrayRef != null) used.add(arrayRef);
         if (index != null) used.add(index);
         break;
     }
-    
     return used;
   }
 
@@ -93,7 +91,7 @@ class DataFlowAnalysis {
         case org.objectweb.asm.Opcodes.FSTORE:
         case org.objectweb.asm.Opcodes.DSTORE:
         case org.objectweb.asm.Opcodes.ASTORE:
-          Variable var = createVariable(varInsn.var);
+          Variable var = createVariable(pMethodNode, varInsn.var);
           if (var != null) {
             defined.add(var);
           }
@@ -102,7 +100,6 @@ class DataFlowAnalysis {
           break;
       }
     }
-    
     // Handle array stores
     switch (opcode) {
       case org.objectweb.asm.Opcodes.IASTORE:
@@ -113,25 +110,31 @@ class DataFlowAnalysis {
       case org.objectweb.asm.Opcodes.BASTORE:
       case org.objectweb.asm.Opcodes.CASTORE:
       case org.objectweb.asm.Opcodes.SASTORE:
-        // Array stores modify the array
-        Variable arrayRef = createVariable(-1);
+        Variable arrayRef = createVariable(pMethodNode, -1);
         if (arrayRef != null) defined.add(arrayRef);
         break;
     }
-    
     return defined;
   }
 
   /**
-   * Helper method to create Variable instances.
+   * Helper method to create Variable instances with the correct type from the local variable table.
    */
-  private static Variable createVariable(int index) {
+  private static Variable createVariable(MethodNode methodNode, int index) {
     try {
-      // VariableImpl(int index, Type type)
-      org.objectweb.asm.Type intType = org.objectweb.asm.Type.INT_TYPE;
+      org.objectweb.asm.Type type = org.objectweb.asm.Type.INT_TYPE; // default
+      if (methodNode != null && methodNode.localVariables != null) {
+        for (Object obj : methodNode.localVariables) {
+          org.objectweb.asm.tree.LocalVariableNode lvn = (org.objectweb.asm.tree.LocalVariableNode) obj;
+          if (lvn.index == index) {
+            type = org.objectweb.asm.Type.getType(lvn.desc);
+            break;
+          }
+        }
+      }
       Class<?> variableImplClass = Class.forName("br.usp.each.saeg.asm.defuse.VariableImpl");
       java.lang.reflect.Constructor<?> constructor = variableImplClass.getConstructor(int.class, org.objectweb.asm.Type.class);
-      return (Variable) constructor.newInstance(index, intType);
+      return (Variable) constructor.newInstance(index, type);
     } catch (Exception e) {
       throw new RuntimeException("Failed to create Variable instance for index " + index, e);
     }
