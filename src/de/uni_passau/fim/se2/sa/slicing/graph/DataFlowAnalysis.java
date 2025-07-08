@@ -39,6 +39,7 @@ class DataFlowAnalysis {
         case org.objectweb.asm.Opcodes.DLOAD:
         case org.objectweb.asm.Opcodes.ALOAD:
           Variable var = createVariable(pMethodNode, varInsn.var);
+          System.out.println("[usedBy] Instruction: " + opcode + ", index: " + varInsn.var + ", Variable: " + var);
           if (var != null) {
             used.add(var);
           }
@@ -59,14 +60,13 @@ class DataFlowAnalysis {
       case org.objectweb.asm.Opcodes.SALOAD:
         Variable arrayRef = createVariable(pMethodNode, -1); // Use -1 to indicate stack variable
         Variable index = createVariable(pMethodNode, -2);
+        System.out.println("[usedBy] Array load, index: -1, Variable: " + arrayRef);
+        System.out.println("[usedBy] Array load, index: -2, Variable: " + index);
         if (arrayRef != null) used.add(arrayRef);
         if (index != null) used.add(index);
         break;
     }
-
-    // Debugging: Log the used variables
     System.out.println("Used variables: " + used);
-
     return used;
   }
 
@@ -95,7 +95,9 @@ class DataFlowAnalysis {
         case org.objectweb.asm.Opcodes.FSTORE:
         case org.objectweb.asm.Opcodes.DSTORE:
         case org.objectweb.asm.Opcodes.ASTORE:
+          // Always create a variable for store instructions, even if not in local variable table
           Variable var = createVariable(pMethodNode, varInsn.var);
+          System.out.println("[definedBy] Instruction: " + opcode + ", index: " + varInsn.var + ", Variable: " + var);
           if (var != null) {
             defined.add(var);
           }
@@ -115,13 +117,11 @@ class DataFlowAnalysis {
       case org.objectweb.asm.Opcodes.CASTORE:
       case org.objectweb.asm.Opcodes.SASTORE:
         Variable arrayRef = createVariable(pMethodNode, -1);
+        System.out.println("[definedBy] Array store, index: -1, Variable: " + arrayRef);
         if (arrayRef != null) defined.add(arrayRef);
         break;
     }
-
-    // Debugging: Log the defined variables
     System.out.println("Defined variables: " + defined);
-
     return defined;
   }
 
@@ -134,7 +134,6 @@ class DataFlowAnalysis {
       boolean found = false;
       // For stack variables (negative indices), always use INT_TYPE
       if (index < 0) {
-        // type already set to INT_TYPE
         found = true;
       } else if (methodNode != null && methodNode.localVariables != null) {
         for (Object obj : methodNode.localVariables) {
@@ -160,8 +159,11 @@ class DataFlowAnalysis {
       // (type already set)
       Class<?> variableImplClass = Class.forName("br.usp.each.saeg.asm.defuse.VariableImpl");
       java.lang.reflect.Constructor<?> constructor = variableImplClass.getConstructor(int.class, org.objectweb.asm.Type.class);
-      return (Variable) constructor.newInstance(index, type);
+      Variable v = (Variable) constructor.newInstance(index, type);
+      System.out.println("[createVariable] index: " + index + ", type: " + type + ", Variable: " + v);
+      return v;
     } catch (Exception e) {
+      System.out.println("[createVariable] ERROR for index: " + index + ", message: " + e.getMessage());
       throw new RuntimeException("Failed to create Variable instance for index " + index, e);
     }
   }
