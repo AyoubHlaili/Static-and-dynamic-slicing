@@ -14,7 +14,7 @@ import org.objectweb.asm.tree.VarInsnNode;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
 
 /** Provides a simple data-flow analysis. */
-class DataFlowAnalysis {
+public class DataFlowAnalysis {
 
   private DataFlowAnalysis() {}
 
@@ -27,45 +27,49 @@ class DataFlowAnalysis {
    * @return The collection of {@link Variable}s that are used by the given instruction
    * @throws AnalyzerException In case an error occurs during the analysis
    */
-  static Collection<Variable> usedBy(
+  public static Collection<Variable> usedBy(
       String pOwningClass, MethodNode pMethodNode, AbstractInsnNode pInstruction)
       throws AnalyzerException {
     Collection<Variable> usedVariables = new ArrayList<>();
     
     int opcode = pInstruction.getOpcode();
     
+    // Skip pseudo-instructions that don't actually execute
+    if (opcode == -1) {
+      return usedVariables;
+    }
+    
     // Handle local variable load instructions
     if (pInstruction instanceof VarInsnNode) {
       VarInsnNode varInsn = (VarInsnNode) pInstruction;
-      if (isLoadInstruction(opcode)) {
+      // Only handle actual load instructions, not stores
+      if (opcode == Opcodes.ILOAD || opcode == Opcodes.LLOAD || 
+          opcode == Opcodes.FLOAD || opcode == Opcodes.DLOAD || opcode == Opcodes.ALOAD) {
         Type type = getLocalVariableType(pMethodNode, varInsn.var, pInstruction);
-        if (type != null) {
-          usedVariables.add(new LocalVariableImpl(type, varInsn.var));
-        }
-      }
-      // IINC both uses and defines a variable
-      else if (opcode == Opcodes.IINC) {
-        usedVariables.add(new LocalVariableImpl(Type.INT_TYPE, varInsn.var));
+        usedVariables.add(new LocalVariableImpl(type, varInsn.var));
       }
     }
-    // Handle field access instructions (GETFIELD, GETSTATIC)
+    // Handle field access instructions that read fields
     else if (pInstruction instanceof FieldInsnNode) {
       FieldInsnNode fieldInsn = (FieldInsnNode) pInstruction;
       if (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
         Type fieldType = Type.getType(fieldInsn.desc);
         usedVariables.add(new FieldVariableImpl(fieldType, fieldInsn.owner, fieldInsn.name));
-        
-        // For non-static field access, the object reference is also used
-        if (opcode == Opcodes.GETFIELD) {
-          // Note: We don't have direct access to the stack variable, but we know it's used
-        }
       }
     }
-    // Handle increment instruction
+    // Handle increment instruction (reads before incrementing)
     else if (pInstruction instanceof IincInsnNode) {
       IincInsnNode iincInsn = (IincInsnNode) pInstruction;
       usedVariables.add(new LocalVariableImpl(Type.INT_TYPE, iincInsn.var));
     }
+    // Explicitly handle array operations (but don't add variables since we don't track stack)
+    else if (opcode >= Opcodes.IALOAD && opcode <= Opcodes.SALOAD) {
+      // Array loads use array reference and index from stack, but we don't track those
+    }
+    else if (opcode >= Opcodes.IASTORE && opcode <= Opcodes.SASTORE) {
+      // Array stores use array reference, index, and value from stack, but we don't track those
+    }
+    // All other instructions (arithmetic, control flow, etc.) don't use local variables or fields
     
     return usedVariables;
   }
@@ -79,24 +83,29 @@ class DataFlowAnalysis {
    * @return The collection of {@link Variable}s that are defined by the given instruction
    * @throws AnalyzerException In case an error occurs during the analysis
    */
-  static Collection<Variable> definedBy(
+  public static Collection<Variable> definedBy(
       String pOwningClass, MethodNode pMethodNode, AbstractInsnNode pInstruction)
       throws AnalyzerException {
     Collection<Variable> definedVariables = new ArrayList<>();
     
     int opcode = pInstruction.getOpcode();
     
+    // Skip pseudo-instructions that don't actually execute
+    if (opcode == -1) {
+      return definedVariables;
+    }
+    
     // Handle local variable store instructions
     if (pInstruction instanceof VarInsnNode) {
       VarInsnNode varInsn = (VarInsnNode) pInstruction;
-      if (isStoreInstruction(opcode)) {
+      // Only handle actual store instructions, not loads
+      if (opcode == Opcodes.ISTORE || opcode == Opcodes.LSTORE || 
+          opcode == Opcodes.FSTORE || opcode == Opcodes.DSTORE || opcode == Opcodes.ASTORE) {
         Type type = getLocalVariableType(pMethodNode, varInsn.var, pInstruction);
-        if (type != null) {
-          definedVariables.add(new LocalVariableImpl(type, varInsn.var));
-        }
+        definedVariables.add(new LocalVariableImpl(type, varInsn.var));
       }
     }
-    // Handle field assignment instructions (PUTFIELD, PUTSTATIC)
+    // Handle field assignment instructions
     else if (pInstruction instanceof FieldInsnNode) {
       FieldInsnNode fieldInsn = (FieldInsnNode) pInstruction;
       if (opcode == Opcodes.PUTFIELD || opcode == Opcodes.PUTSTATIC) {
@@ -104,38 +113,34 @@ class DataFlowAnalysis {
         definedVariables.add(new FieldVariableImpl(fieldType, fieldInsn.owner, fieldInsn.name));
       }
     }
-    // Handle increment instruction (both uses and defines)
+    // Handle increment instruction (defines the variable after incrementing)
     else if (pInstruction instanceof IincInsnNode) {
       IincInsnNode iincInsn = (IincInsnNode) pInstruction;
       definedVariables.add(new LocalVariableImpl(Type.INT_TYPE, iincInsn.var));
     }
+    // Explicitly handle array operations (but don't add variables since arrays don't define local variables)
+    else if (opcode >= Opcodes.IASTORE && opcode <= Opcodes.SASTORE) {
+      // Array stores don't define local variables, they define array elements
+    }
+    // All other instructions don't define local variables or fields
     
     return definedVariables;
-  }
-  
-  /**
-   * Checks if the given opcode represents a load instruction.
-   */
-  private static boolean isLoadInstruction(int opcode) {
-    return opcode >= Opcodes.ILOAD && opcode <= Opcodes.ALOAD ||
-           opcode == Opcodes.ILOAD || opcode == Opcodes.LLOAD || 
-           opcode == Opcodes.FLOAD || opcode == Opcodes.DLOAD || opcode == Opcodes.ALOAD;
-  }
-  
-  /**
-   * Checks if the given opcode represents a store instruction.
-   */
-  private static boolean isStoreInstruction(int opcode) {
-    return opcode >= Opcodes.ISTORE && opcode <= Opcodes.ASTORE ||
-           opcode == Opcodes.ISTORE || opcode == Opcodes.LSTORE || 
-           opcode == Opcodes.FSTORE || opcode == Opcodes.DSTORE || opcode == Opcodes.ASTORE;
   }
   
   /**
    * Gets the type of a local variable at a given instruction.
    */
   private static Type getLocalVariableType(MethodNode methodNode, int varIndex, AbstractInsnNode instruction) {
-    // For now, return a generic type based on the instruction opcode
+    // First try to get type from local variable table if available
+    if (methodNode.localVariables != null) {
+      for (org.objectweb.asm.tree.LocalVariableNode lvn : methodNode.localVariables) {
+        if (lvn.index == varIndex) {
+          return Type.getType(lvn.desc);
+        }
+      }
+    }
+    
+    // Fallback to type inference based on instruction opcode
     int opcode = instruction.getOpcode();
     
     if (opcode == Opcodes.ILOAD || opcode == Opcodes.ISTORE || opcode == Opcodes.IINC) {
@@ -150,7 +155,9 @@ class DataFlowAnalysis {
       return Type.getObjectType("java/lang/Object");
     }
     
-    return Type.getObjectType("java/lang/Object"); // Default fallback
+    // Final fallback - if we can't determine the type, still return a default
+    // This ensures we don't lose variable definitions due to type inference failure
+    return Type.getObjectType("java/lang/Object");
   }
   
   /**
