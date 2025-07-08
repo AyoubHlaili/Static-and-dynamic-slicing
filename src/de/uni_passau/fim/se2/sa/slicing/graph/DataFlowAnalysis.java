@@ -123,12 +123,37 @@ class DataFlowAnalysis {
   }
 
   /**
-   * Helper method to create Variable instances using reflection.
+   * Helper method to create Variable instances.
    */
   private static Variable createVariable(int index) {
     try {
-      java.lang.reflect.Method valueOf = Variable.class.getMethod("valueOf", int.class);
-      return (Variable) valueOf.invoke(null, index);
+      // Try using the Variable constructor with various approaches
+      java.lang.reflect.Constructor<?>[] constructors = Variable.class.getDeclaredConstructors();
+      for (java.lang.reflect.Constructor<?> constructor : constructors) {
+        constructor.setAccessible(true);
+        if (constructor.getParameterCount() == 1) {
+          Class<?> paramType = constructor.getParameterTypes()[0];
+          if (paramType == int.class || paramType == Integer.class) {
+            return (Variable) constructor.newInstance(index);
+          }
+        }
+      }
+      
+      // Try static methods
+      java.lang.reflect.Method[] methods = Variable.class.getDeclaredMethods();
+      for (java.lang.reflect.Method method : methods) {
+        if (java.lang.reflect.Modifier.isStatic(method.getModifiers()) && 
+            method.getParameterCount() == 1 &&
+            method.getReturnType() == Variable.class) {
+          Class<?> paramType = method.getParameterTypes()[0];
+          if (paramType == int.class || paramType == Integer.class) {
+            method.setAccessible(true);
+            return (Variable) method.invoke(null, index);
+          }
+        }
+      }
+      
+      throw new RuntimeException("No suitable constructor or factory method found for Variable");
     } catch (Exception e) {
       throw new RuntimeException("Failed to create Variable instance for index " + index, e);
     }
