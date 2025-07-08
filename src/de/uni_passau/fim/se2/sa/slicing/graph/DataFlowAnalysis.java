@@ -127,53 +127,10 @@ class DataFlowAnalysis {
    */
   private static Variable createVariable(int index) {
     try {
-      // Try common Variable creation patterns
-      return Variable.class.getConstructor(int.class).newInstance(index);
+      java.lang.reflect.Method valueOf = Variable.class.getMethod("valueOf", int.class);
+      return (Variable) valueOf.invoke(null, index);
     } catch (Exception e) {
-      try {
-        java.lang.reflect.Method valueOf = Variable.class.getMethod("valueOf", int.class);
-        return (Variable) valueOf.invoke(null, index);
-      } catch (Exception e2) {
-        try {
-          // Try to find any single-parameter constructor
-          java.lang.reflect.Constructor<?>[] constructors = Variable.class.getDeclaredConstructors();
-          for (java.lang.reflect.Constructor<?> constructor : constructors) {
-            constructor.setAccessible(true);
-            if (constructor.getParameterCount() == 1) {
-              return (Variable) constructor.newInstance(index);
-            }
-          }
-        } catch (Exception e3) {
-          // Try to create with no-arg constructor and set field
-          try {
-            java.lang.reflect.Constructor<?> noArgConstructor = Variable.class.getDeclaredConstructor();
-            noArgConstructor.setAccessible(true);
-            Variable var = (Variable) noArgConstructor.newInstance();
-            // Try to set an index field
-            try {
-              java.lang.reflect.Field indexField = Variable.class.getDeclaredField("index");
-              indexField.setAccessible(true);
-              indexField.set(var, index);
-            } catch (Exception e4) {
-              // Try other common field names
-              try {
-                java.lang.reflect.Field varField = Variable.class.getDeclaredField("var");
-                varField.setAccessible(true);
-                varField.set(var, index);
-              } catch (Exception e5) {
-                // Ignore and return the variable anyway
-              }
-            }
-            return var;
-          } catch (Exception e4) {
-            // All approaches failed
-            // As a last resort, throw an exception to make the error visible
-            throw new RuntimeException("Failed to create Variable instance for index " + index, e4);
-          }
-        }
-      }
+      throw new RuntimeException("Failed to create Variable instance for index " + index, e);
     }
-    // Should never reach here
-    throw new RuntimeException("Failed to create Variable instance for index " + index);
   }
 }
