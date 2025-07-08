@@ -59,3 +59,17 @@ public class ControlDependenceGraph extends Graph {
     return cdg;
   }
 }
+// Example
+// void foo(boolean x) {
+//     if (x)         // A
+//         doSomething(); // B
+//     doAnother();   // C
+// }
+// CFG Edges: A → B, A → C
+// Post-Dominators:
+// B is post-dominated by C
+// C post-dominates itself
+// A is not post-dominated by B
+// CDG Output:
+// B is control dependent on A
+// C is not control dependent on A (it runs regardless of the condition)

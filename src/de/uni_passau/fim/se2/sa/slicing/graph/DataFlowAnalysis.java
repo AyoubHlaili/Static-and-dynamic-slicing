@@ -167,11 +167,13 @@ class DataFlowAnalysis {
             return var;
           } catch (Exception e4) {
             // All approaches failed
-            return null;
+            // As a last resort, throw an exception to make the error visible
+            throw new RuntimeException("Failed to create Variable instance for index " + index, e4);
           }
         }
       }
     }
-    return null;
+    // Should never reach here
+    throw new RuntimeException("Failed to create Variable instance for index " + index);
   }
 }
