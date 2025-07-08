@@ -63,6 +63,10 @@ class DataFlowAnalysis {
         if (index != null) used.add(index);
         break;
     }
+
+    // Debugging: Log the used variables
+    System.out.println("Used variables: " + used);
+
     return used;
   }
 
@@ -114,6 +118,10 @@ class DataFlowAnalysis {
         if (arrayRef != null) defined.add(arrayRef);
         break;
     }
+
+    // Debugging: Log the defined variables
+    System.out.println("Defined variables: " + defined);
+
     return defined;
   }
 
@@ -123,15 +131,33 @@ class DataFlowAnalysis {
   private static Variable createVariable(MethodNode methodNode, int index) {
     try {
       org.objectweb.asm.Type type = org.objectweb.asm.Type.INT_TYPE; // default
-      if (methodNode != null && methodNode.localVariables != null) {
+      boolean found = false;
+      // For stack variables (negative indices), always use INT_TYPE
+      if (index < 0) {
+        // type already set to INT_TYPE
+        found = true;
+      } else if (methodNode != null && methodNode.localVariables != null) {
         for (Object obj : methodNode.localVariables) {
           org.objectweb.asm.tree.LocalVariableNode lvn = (org.objectweb.asm.tree.LocalVariableNode) obj;
           if (lvn.index == index) {
             type = org.objectweb.asm.Type.getType(lvn.desc);
+            found = true;
             break;
           }
         }
       }
+      // If not found and index == 0, try to infer 'this' or first argument
+      if (!found && index == 0 && methodNode != null) {
+        boolean isStatic = (methodNode.access & org.objectweb.asm.Opcodes.ACC_STATIC) != 0;
+        if (!isStatic) {
+          // 'this' reference: use the class type
+          // Try to get the class name from the methodNode's parent (not available here), so fallback to Object
+          type = org.objectweb.asm.Type.getType("Ljava/lang/Object;");
+          found = true;
+        }
+      }
+      // If still not found, fallback to INT_TYPE
+      // (type already set)
       Class<?> variableImplClass = Class.forName("br.usp.each.saeg.asm.defuse.VariableImpl");
       java.lang.reflect.Constructor<?> constructor = variableImplClass.getConstructor(int.class, org.objectweb.asm.Type.class);
       return (Variable) constructor.newInstance(index, type);
