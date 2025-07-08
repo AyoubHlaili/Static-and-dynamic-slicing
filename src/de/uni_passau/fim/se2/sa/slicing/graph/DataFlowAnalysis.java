@@ -31,6 +31,9 @@ public class DataFlowAnalysis {
       String pOwningClass, MethodNode pMethodNode, AbstractInsnNode pInstruction)
       throws AnalyzerException {
     Collection<Variable> usedVariables = new ArrayList<>();
+    if (pInstruction == null) {
+      return usedVariables;
+    }
     
     int opcode = pInstruction.getOpcode();
     
@@ -87,6 +90,9 @@ public class DataFlowAnalysis {
       String pOwningClass, MethodNode pMethodNode, AbstractInsnNode pInstruction)
       throws AnalyzerException {
     Collection<Variable> definedVariables = new ArrayList<>();
+    if (pInstruction == null) {
+      return definedVariables;
+    }
     
     int opcode = pInstruction.getOpcode();
     
