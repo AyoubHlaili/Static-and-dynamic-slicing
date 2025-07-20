@@ -32,51 +32,30 @@ public class DataFlowAnalysis {
   ) throws AnalyzerException {
     Collection<Variable> usedVariables = new ArrayList<>();
     
-    switch (pInstruction.getOpcode()) {
-      // Load instructions - use local variables
-      case Opcodes.ILOAD:
-      case Opcodes.LLOAD:
-      case Opcodes.FLOAD:
-      case Opcodes.DLOAD:
-      case Opcodes.ALOAD:
-        VarInsnNode varInsn = (VarInsnNode) pInstruction;
-        Type type = getLocalVariableType(pMethodNode, varInsn.var, pInstruction);
+    int opcode = pInstruction.getOpcode();
+    // Local variable is used by load and iinc instructions
+    if (opcode == Opcodes.ILOAD || opcode == Opcodes.LLOAD || opcode == Opcodes.FLOAD ||
+        opcode == Opcodes.DLOAD || opcode == Opcodes.ALOAD || opcode == Opcodes.IINC) {
+      int varIdx;
+      if (pInstruction instanceof VarInsnNode) {
+        varIdx = ((VarInsnNode) pInstruction).var;
+      } else if (pInstruction instanceof IincInsnNode) {
+        varIdx = ((IincInsnNode) pInstruction).var;
+      } else {
+        varIdx = -1;
+      }
+      if (varIdx >= 0) {
+        Type type = getLocalVariableType(pMethodNode, varIdx, pInstruction);
         usedVariables.add(new VariableImpl(type));
-        break;
-        
-      // Get field instructions - use the field
-      case Opcodes.GETFIELD:
-      case Opcodes.GETSTATIC:
-        FieldInsnNode fieldInsn = (FieldInsnNode) pInstruction;
-        Type fieldType = Type.getType(fieldInsn.desc);
-        usedVariables.add(new VariableImpl(fieldType));
-        break;
-        
-      // Increment instruction - uses and defines local variable
-      case Opcodes.IINC:
-        IincInsnNode iincInsn = (IincInsnNode) pInstruction;
-        Type intType = getLocalVariableType(pMethodNode, iincInsn.var, pInstruction);
-        usedVariables.add(new VariableImpl(intType));
-        break;
-        
-      // Array load instructions - use array reference and index
-      case Opcodes.IALOAD:
-      case Opcodes.LALOAD:
-      case Opcodes.FALOAD:
-      case Opcodes.DALOAD:
-      case Opcodes.AALOAD:
-      case Opcodes.BALOAD:
-      case Opcodes.CALOAD:
-      case Opcodes.SALOAD:
-        // For array loads, we would need to track the array and index on the stack
-        // This is a simplified implementation
-        break;
-        
-      default:
-        // No variables used for other instructions
-        break;
+      }
     }
-    
+    // Field instructions use the field
+    if (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
+      FieldInsnNode fieldInsn = (FieldInsnNode) pInstruction;
+      Type fieldType = Type.getType(fieldInsn.desc);
+      usedVariables.add(new VariableImpl(fieldType));
+    }
+    // (Array loads, method calls, etc. can be added as needed)
     return usedVariables;
   }
 
@@ -94,51 +73,30 @@ public class DataFlowAnalysis {
   ) throws AnalyzerException {
     Collection<Variable> definedVariables = new ArrayList<>();
     
-    switch (pInstruction.getOpcode()) {
-      // Store instructions - define local variables
-      case Opcodes.ISTORE:
-      case Opcodes.LSTORE:
-      case Opcodes.FSTORE:
-      case Opcodes.DSTORE:
-      case Opcodes.ASTORE:
-        VarInsnNode varInsn = (VarInsnNode) pInstruction;
-        Type type = getLocalVariableType(pMethodNode, varInsn.var, pInstruction);
+    int opcode = pInstruction.getOpcode();
+    // Local variable is defined by store and iinc instructions
+    if (opcode == Opcodes.ISTORE || opcode == Opcodes.LSTORE || opcode == Opcodes.FSTORE ||
+        opcode == Opcodes.DSTORE || opcode == Opcodes.ASTORE || opcode == Opcodes.IINC) {
+      int varIdx;
+      if (pInstruction instanceof VarInsnNode) {
+        varIdx = ((VarInsnNode) pInstruction).var;
+      } else if (pInstruction instanceof IincInsnNode) {
+        varIdx = ((IincInsnNode) pInstruction).var;
+      } else {
+        varIdx = -1;
+      }
+      if (varIdx >= 0) {
+        Type type = getLocalVariableType(pMethodNode, varIdx, pInstruction);
         definedVariables.add(new VariableImpl(type));
-        break;
-        
-      // Put field instructions - define the field
-      case Opcodes.PUTFIELD:
-      case Opcodes.PUTSTATIC:
-        FieldInsnNode fieldInsn = (FieldInsnNode) pInstruction;
-        Type fieldType = Type.getType(fieldInsn.desc);
-        definedVariables.add(new VariableImpl(fieldType));
-        break;
-        
-      // Increment instruction - defines local variable
-      case Opcodes.IINC:
-        IincInsnNode iincInsn = (IincInsnNode) pInstruction;
-        Type intType = getLocalVariableType(pMethodNode, iincInsn.var, pInstruction);
-        definedVariables.add(new VariableImpl(intType));
-        break;
-        
-      // Array store instructions - define array element
-      case Opcodes.IASTORE:
-      case Opcodes.LASTORE:
-      case Opcodes.FASTORE:
-      case Opcodes.DASTORE:
-      case Opcodes.AASTORE:
-      case Opcodes.BASTORE:
-      case Opcodes.CASTORE:
-      case Opcodes.SASTORE:
-        // For array stores, we would need to track the array reference
-        // This is a simplified implementation
-        break;
-        
-      default:
-        // No variables defined for other instructions
-        break;
+      }
     }
-    
+    // Field instructions define the field
+    if (opcode == Opcodes.PUTFIELD || opcode == Opcodes.PUTSTATIC) {
+      FieldInsnNode fieldInsn = (FieldInsnNode) pInstruction;
+      Type fieldType = Type.getType(fieldInsn.desc);
+      definedVariables.add(new VariableImpl(fieldType));
+    }
+    // (Array stores, etc. can be added as needed)
     return definedVariables;
   }
   
