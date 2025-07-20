@@ -44,14 +44,6 @@ public class DataFlowAnalysis {
       Type type = getLocalVariableType(pMethodNode, varInsn.var, pInstruction);
       usedVariables.add(new VariableImpl(type));
     }
-    
-    // Increment instruction - uses local variable
-    if (pInstruction instanceof IincInsnNode) {
-      IincInsnNode iincInsn = (IincInsnNode) pInstruction;
-      Type type = getLocalVariableType(pMethodNode, iincInsn.var, pInstruction);
-      usedVariables.add(new VariableImpl(type));
-    }
-    
     // Field instructions use the field
     if (pInstruction instanceof FieldInsnNode && 
         (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC)) {
@@ -59,7 +51,6 @@ public class DataFlowAnalysis {
       Type fieldType = Type.getType(fieldInsn.desc);
       usedVariables.add(new VariableImpl(fieldType));
     }
-    
     return usedVariables;
   }
 
