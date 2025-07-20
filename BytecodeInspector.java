@@ -34,43 +34,16 @@ public class BytecodeInspector {
                         System.out.println("Index " + index + ": " + insn.getClass().getSimpleName() + 
                                          " (opcode: " + insn.getOpcode() + ")");
                         
-                        // Test our DataFlowAnalysis methods at specific indices
-                        if (index == 0) {
+                        // Test our DataFlowAnalysis methods
+                        if (index == 0 || index == 10) {
                             try {
                                 Collection<Variable> defined = DataFlowAnalysis.definedBy(
                                     classNode.name, method, insn);
                                 Collection<Variable> used = DataFlowAnalysis.usedBy(
                                     classNode.name, method, insn);
                                 
-                                System.out.println("  - Index 0 - Defined variables: " + defined.size());
-                                System.out.println("  - Index 0 - Used variables: " + used.size());
-                                System.out.println("  - DFA_definedBy test: " + 
-                                    (defined.size() == 1 ? "PASS" : "FAIL") + 
-                                    " (expected: 1, actual: " + defined.size() + ")");
-                                
-                                for (Variable v : defined) {
-                                    System.out.println("    Defined: " + v);
-                                }
-                                for (Variable v : used) {
-                                    System.out.println("    Used: " + v);
-                                }
-                            } catch (Exception e) {
-                                System.out.println("  Error: " + e.getMessage());
-                            }
-                        }
-                        
-                        if (index == 10) {
-                            try {
-                                Collection<Variable> defined = DataFlowAnalysis.definedBy(
-                                    classNode.name, method, insn);
-                                Collection<Variable> used = DataFlowAnalysis.usedBy(
-                                    classNode.name, method, insn);
-                                
-                                System.out.println("  - Index 10 - Defined variables: " + defined.size());
-                                System.out.println("  - Index 10 - Used variables: " + used.size());
-                                System.out.println("  - DFA_usedBy test: " + 
-                                    (used.size() == 0 ? "PASS" : "FAIL") + 
-                                    " (expected: 0, actual: " + used.size() + ")");
+                                System.out.println("  - Defined variables: " + defined.size());
+                                System.out.println("  - Used variables: " + used.size());
                                 
                                 for (Variable v : defined) {
                                     System.out.println("    Defined: " + v);
