@@ -59,9 +59,11 @@ public class DataDependenceGraph extends Graph {
     }
     for (de.uni_passau.fim.se2.sa.slicing.cfg.Node node : cfg.getNodes()) {
       java.util.Set<String> killed = new java.util.HashSet<>();
-      for (String v : gen.get(node)) {
-        for (de.uni_passau.fim.se2.sa.slicing.cfg.Node n2 : cfg.getNodes()) {
-          if (n2 != node && gen.get(n2).contains(v)) {
+      // For each variable defined at other nodes (not this node), add to kill set
+      for (de.uni_passau.fim.se2.sa.slicing.cfg.Node n2 : cfg.getNodes()) {
+        if (n2 == node) continue;
+        for (String v : gen.get(n2)) {
+          if (gen.get(node).contains(v)) {
             killed.add(v);
           }
         }
