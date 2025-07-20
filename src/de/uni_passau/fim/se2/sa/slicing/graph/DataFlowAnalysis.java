@@ -60,6 +60,28 @@ public class DataFlowAnalysis {
       }
       usedVariables.add(new SlotVariable(type, varInsn.var));
     }
+    // Increment instruction - uses the local variable
+    if (pInstruction instanceof IincInsnNode) {
+      IincInsnNode iincInsn = (IincInsnNode) pInstruction;
+      Type type = getLocalVariableType(pMethodNode, iincInsn.var, pInstruction);
+      // Use the same SlotVariable logic as above
+      class SlotVariable extends VariableImpl {
+        private final int slot;
+        public SlotVariable(Type t, int s) { super(t); this.slot = s; }
+        @Override
+        public String toString() { return super.toString() + "@slot" + slot; }
+        @Override
+        public int hashCode() { return super.hashCode() * 31 + slot; }
+        @Override
+        public boolean equals(Object obj) {
+          if (this == obj) return true;
+          if (obj == null || getClass() != obj.getClass()) return false;
+          SlotVariable other = (SlotVariable) obj;
+          return slot == other.slot && super.equals(obj);
+        }
+      }
+      usedVariables.add(new SlotVariable(type, iincInsn.var));
+    }
     // Field instructions use the field
     if (pInstruction instanceof FieldInsnNode &&
         (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC)) {
