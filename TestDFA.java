@@ -8,11 +8,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 
-public class BytecodeInspector {
+public class TestDFA {
     public static void main(String[] args) {
         try {
             // Load the SimpleInteger class
-            InputStream is = BytecodeInspector.class.getResourceAsStream("/de/uni_passau/fim/se2/sa/examples/SimpleInteger.class");
+            InputStream is = TestDFA.class.getResourceAsStream("/de/uni_passau/fim/se2/sa/examples/SimpleInteger.class");
             if (is == null) {
                 System.out.println("Could not find SimpleInteger.class in resources");
                 return;
@@ -34,43 +34,23 @@ public class BytecodeInspector {
                         System.out.println("Index " + index + ": " + insn.getClass().getSimpleName() + 
                                          " (opcode: " + insn.getOpcode() + ")");
                         
-                        // Test our DataFlowAnalysis methods at specific indices
-                        if (index == 0) {
+                        // Test our DataFlowAnalysis methods
+                        if (index == 0 || index == 10) {
                             try {
                                 Collection<Variable> defined = DataFlowAnalysis.definedBy(
                                     classNode.name, method, insn);
                                 Collection<Variable> used = DataFlowAnalysis.usedBy(
                                     classNode.name, method, insn);
                                 
-                                System.out.println("  - Index 0 - Defined variables: " + defined.size());
-                                System.out.println("  - Index 0 - Used variables: " + used.size());
-                                System.out.println("  - DFA_definedBy test: " + 
-                                    (defined.size() == 1 ? "PASS" : "FAIL") + 
-                                    " (expected: 1, actual: " + defined.size() + ")");
+                                System.out.println("  - Test Case · DFA_definedBy " + (index == 0 ? "" : "failed"));
+                                System.out.println("    Instruction at index " + index + " " +
+                                    (defined.size() > 0 ? "defines a variable." : "does not define a variable."));
+                                System.out.println("    Expected: " + (index == 0 ? "1" : "0") + ", but was: " + defined.size());
                                 
-                                for (Variable v : defined) {
-                                    System.out.println("    Defined: " + v);
-                                }
-                                for (Variable v : used) {
-                                    System.out.println("    Used: " + v);
-                                }
-                            } catch (Exception e) {
-                                System.out.println("  Error: " + e.getMessage());
-                            }
-                        }
-                        
-                        if (index == 10) {
-                            try {
-                                Collection<Variable> defined = DataFlowAnalysis.definedBy(
-                                    classNode.name, method, insn);
-                                Collection<Variable> used = DataFlowAnalysis.usedBy(
-                                    classNode.name, method, insn);
-                                
-                                System.out.println("  - Index 10 - Defined variables: " + defined.size());
-                                System.out.println("  - Index 10 - Used variables: " + used.size());
-                                System.out.println("  - DFA_usedBy test: " + 
-                                    (used.size() == 0 ? "PASS" : "FAIL") + 
-                                    " (expected: 0, actual: " + used.size() + ")");
+                                System.out.println("  - Test Case · DFA_usedBy " + (index == 10 ? "" : "failed"));
+                                System.out.println("    Instruction at index " + index + " " +
+                                    (used.size() == 0 ? "does not make use of a variable." : "makes use of variables."));
+                                System.out.println("    Expected to be " + (index == 10 ? "true" : "false"));
                                 
                                 for (Variable v : defined) {
                                     System.out.println("    Defined: " + v);

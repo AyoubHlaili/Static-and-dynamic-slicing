@@ -8,14 +8,48 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.IincInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.VarInsnNode;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
 
 /** Provides a simple data-flow analysis. */
 public class DataFlowAnalysis {
 
   private DataFlowAnalysis() {}
+  
+  /**
+   * A custom variable implementation that tracks variable indices.
+   */
+  private static class IndexedVariable extends VariableImpl {
+    private final int index;
+    private final Type type;
+    
+    public IndexedVariable(int index, Type type) {
+      super(type);
+      this.index = index;
+      this.type = type;
+    }
+    
+    @Override
+    public String toString() {
+      return "Var[" + index + ":" + type + "]";
+    }
+    
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj) return true;
+      if (!(obj instanceof IndexedVariable)) return false;
+      IndexedVariable other = (IndexedVariable) obj;
+      return index == other.index && type.equals(other.type);
+    }
+    
+    @Override
+    public int hashCode() {
+      return index * 31 + type.hashCode();
+    }
+  }
 
   /**
    * Provides the collection of {@link Variable}s that are used by the given instruction.
@@ -38,21 +72,38 @@ public class DataFlowAnalysis {
       case Opcodes.FLOAD:
       case Opcodes.DLOAD:
       case Opcodes.ALOAD:
-        // int varIndex = ((VarInsnNode) pInstruction).var;
-        usedVariables.add(new VariableImpl(getType(pInstruction.getOpcode())));
+        VarInsnNode varNode = (VarInsnNode) pInstruction;
+        usedVariables.add(new IndexedVariable(varNode.var, getType(pInstruction.getOpcode())));
+        break;
+        
+      // Handle ILOAD_0, ILOAD_1, etc.
+      case 26: case 27: case 28: case 29: // ILOAD_0 to ILOAD_3
+        usedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 26, Type.INT_TYPE));
+        break;
+      case 30: case 31: case 32: case 33: // LLOAD_0 to LLOAD_3
+        usedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 30, Type.LONG_TYPE));
+        break;
+      case 34: case 35: case 36: case 37: // FLOAD_0 to FLOAD_3
+        usedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 34, Type.FLOAT_TYPE));
+        break;
+      case 38: case 39: case 40: case 41: // DLOAD_0 to DLOAD_3
+        usedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 38, Type.DOUBLE_TYPE));
+        break;
+      case 42: case 43: case 44: case 45: // ALOAD_0 to ALOAD_3
+        usedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 42, Type.getType("Ljava/lang/Object;")));
         break;
         
       // Handle field access (GETFIELD)
       case Opcodes.GETFIELD:
         FieldInsnNode fieldNode = (FieldInsnNode) pInstruction;
-        // The object whose field is being accessed is used
-        usedVariables.add(new VariableImpl(Type.getObjectType(fieldNode.owner)));
+        // The object whose field is being accessed is used (typically 'this' in slot 0)
+        usedVariables.add(new IndexedVariable(0, Type.getObjectType(fieldNode.owner)));
         break;
         
       // Handle IINC instruction (both var and increment value are used)
       case Opcodes.IINC:
-        // IincInsnNode iincNode = (IincInsnNode) pInstruction;
-        usedVariables.add(new VariableImpl(Type.INT_TYPE));
+        IincInsnNode iincNode = (IincInsnNode) pInstruction;
+        usedVariables.add(new IndexedVariable(iincNode.var, Type.INT_TYPE));
         break;
         
       // Handle method invocation
@@ -62,14 +113,20 @@ public class DataFlowAnalysis {
       case Opcodes.INVOKEINTERFACE:
         // Method parameters are used (including 'this' for non-static methods)
         Type[] argTypes = Type.getArgumentTypes(((MethodInsnNode) pInstruction).desc);
+        int paramIndex = 0;
         if (pInstruction.getOpcode() != Opcodes.INVOKESTATIC) {
           // Add 'this' reference for non-static methods
-          usedVariables.add(new VariableImpl(Type.getObjectType(pOwningClass)));
+          usedVariables.add(new IndexedVariable(paramIndex++, Type.getObjectType(pOwningClass)));
         }
         // Add parameters
-        for (int i = 0; i < argTypes.length; i++) {
-          usedVariables.add(new VariableImpl(argTypes[i]));
+        for (Type argType : argTypes) {
+          usedVariables.add(new IndexedVariable(paramIndex++, argType));
         }
+        break;
+        
+      // All other instructions (constants, arithmetic, etc.) don't use local variables
+      default:
+        // No variables used
         break;
     }
     
@@ -97,21 +154,37 @@ public class DataFlowAnalysis {
       case Opcodes.FSTORE:
       case Opcodes.DSTORE:
       case Opcodes.ASTORE:
-        // int varIndex = ((VarInsnNode) pInstruction).var;
-        definedVariables.add(new VariableImpl(getType(pInstruction.getOpcode())));
+        VarInsnNode varNode = (VarInsnNode) pInstruction;
+        definedVariables.add(new IndexedVariable(varNode.var, getType(pInstruction.getOpcode())));
+        break;
+        
+      // Handle ISTORE_0, ISTORE_1, etc.
+      case 59: case 60: case 61: case 62: // ISTORE_0 to ISTORE_3
+        definedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 59, Type.INT_TYPE));
+        break;
+      case 63: case 64: case 65: case 66: // LSTORE_0 to LSTORE_3
+        definedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 63, Type.LONG_TYPE));
+        break;
+      case 67: case 68: case 69: case 70: // FSTORE_0 to FSTORE_3
+        definedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 67, Type.FLOAT_TYPE));
+        break;
+      case 71: case 72: case 73: case 74: // DSTORE_0 to DSTORE_3
+        definedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 71, Type.DOUBLE_TYPE));
+        break;
+      case 75: case 76: case 77: case 78: // ASTORE_0 to ASTORE_3
+        definedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 75, Type.getType("Ljava/lang/Object;")));
         break;
         
       // Handle field access (PUTFIELD)
       case Opcodes.PUTFIELD:
-        FieldInsnNode fieldNode = (FieldInsnNode) pInstruction;
-        // The field being stored to is defined
-        definedVariables.add(new VariableImpl(Type.getObjectType(fieldNode.owner)));
+        // The field being stored to is defined (not the local variable index, but the field itself)
+        // For simplicity, we don't track field definitions as variable indices
         break;
         
       // Handle IINC instruction (the variable is defined)
       case Opcodes.IINC:
-        // IincInsnNode iincNode = (IincInsnNode) pInstruction;
-        definedVariables.add(new VariableImpl(Type.INT_TYPE));
+        IincInsnNode iincNode = (IincInsnNode) pInstruction;
+        definedVariables.add(new IndexedVariable(iincNode.var, Type.INT_TYPE));
         break;
         
       // Handle method invocation that returns a value
@@ -122,9 +195,14 @@ public class DataFlowAnalysis {
         Type returnType = Type.getReturnType(((MethodInsnNode) pInstruction).desc);
         if (returnType != Type.VOID_TYPE) {
           // The return value is defined (stored in the stack, not a local variable)
-          // For simplicity, we'll represent it as a special variable
-          definedVariables.add(new VariableImpl(returnType)); // stack value
+          // For simplicity, we'll represent it as a special variable with index -1
+          definedVariables.add(new IndexedVariable(-1, returnType));
         }
+        break;
+        
+      // All other instructions (constants, arithmetic, etc.) don't define local variables
+      default:
+        // No variables defined
         break;
     }
     
