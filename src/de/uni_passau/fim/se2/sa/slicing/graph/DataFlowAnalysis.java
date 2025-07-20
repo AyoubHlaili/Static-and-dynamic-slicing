@@ -35,17 +35,33 @@ public class DataFlowAnalysis {
       return usedVariables;
     }
     int opcode = pInstruction.getOpcode();
-    
+
     // Local variable load instructions - use local variables
-    if (pInstruction instanceof VarInsnNode && 
+    if (pInstruction instanceof VarInsnNode &&
         (opcode == Opcodes.ILOAD || opcode == Opcodes.LLOAD || opcode == Opcodes.FLOAD ||
          opcode == Opcodes.DLOAD || opcode == Opcodes.ALOAD)) {
       VarInsnNode varInsn = (VarInsnNode) pInstruction;
       Type type = getLocalVariableType(pMethodNode, varInsn.var, pInstruction);
-      usedVariables.add(new VariableImpl(type));
+      // Use a local class to represent variable with type and slot
+      class SlotVariable extends VariableImpl {
+        private final int slot;
+        public SlotVariable(Type t, int s) { super(t); this.slot = s; }
+        @Override
+        public String toString() { return super.toString() + "@slot" + slot; }
+        @Override
+        public int hashCode() { return super.hashCode() * 31 + slot; }
+        @Override
+        public boolean equals(Object obj) {
+          if (this == obj) return true;
+          if (obj == null || getClass() != obj.getClass()) return false;
+          SlotVariable other = (SlotVariable) obj;
+          return slot == other.slot && super.equals(obj);
+        }
+      }
+      usedVariables.add(new SlotVariable(type, varInsn.var));
     }
     // Field instructions use the field
-    if (pInstruction instanceof FieldInsnNode && 
+    if (pInstruction instanceof FieldInsnNode &&
         (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC)) {
       FieldInsnNode fieldInsn = (FieldInsnNode) pInstruction;
       Type fieldType = Type.getType(fieldInsn.desc);
