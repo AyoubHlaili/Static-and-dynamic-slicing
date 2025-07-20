@@ -9,6 +9,7 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.IincInsnNode;
+import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
@@ -28,69 +29,65 @@ public class DataFlowAnalysis {
    * @throws AnalyzerException In case an error occurs during the analysis
    */
   public static Collection<Variable> usedBy(
-      String pOwningClass, MethodNode pMethodNode, AbstractInsnNode pInstruction
-  ) throws AnalyzerException {
+    String pOwningClass, MethodNode pMethodNode, AbstractInsnNode pInstruction
+) throws AnalyzerException {
     Collection<Variable> usedVariables = new ArrayList<>();
     if (pInstruction == null) {
-      return usedVariables;
+        return usedVariables;
     }
     int opcode = pInstruction.getOpcode();
 
-    // Local variable load instructions - use local variables
-    if (pInstruction instanceof VarInsnNode &&
-        (opcode == Opcodes.ILOAD || opcode == Opcodes.LLOAD || opcode == Opcodes.FLOAD ||
-         opcode == Opcodes.DLOAD || opcode == Opcodes.ALOAD)) {
-      VarInsnNode varInsn = (VarInsnNode) pInstruction;
-      Type type = getLocalVariableType(pMethodNode, varInsn.var, pInstruction);
-      // Use a local class to represent variable with type and slot
-      class SlotVariable extends VariableImpl {
-        private final int slot;
-        public SlotVariable(Type t, int s) { super(t); this.slot = s; }
-        @Override
-        public String toString() { return super.toString() + "@slot" + slot; }
-        @Override
-        public int hashCode() { return super.hashCode() * 31 + slot; }
-        @Override
-        public boolean equals(Object obj) {
-          if (this == obj) return true;
-          if (obj == null || getClass() != obj.getClass()) return false;
-          SlotVariable other = (SlotVariable) obj;
-          return slot == other.slot && super.equals(obj);
-        }
-      }
-      usedVariables.add(new SlotVariable(type, varInsn.var));
+    // Handle local variable loads
+    if (pInstruction instanceof VarInsnNode && 
+        (opcode == Opcodes.ILOAD || opcode == Opcodes.LLOAD || 
+         opcode == Opcodes.FLOAD || opcode == Opcodes.DLOAD || 
+         opcode == Opcodes.ALOAD)) {
+        VarInsnNode varInsn = (VarInsnNode) pInstruction;
+        Type type = getLocalVariableType(pMethodNode, varInsn.var, pInstruction);
+        // Create variable with proper type
+        usedVariables.add(new VariableImpl(type));
     }
-    // Increment instruction - uses the local variable
+
+    // Handle IINC instruction (uses the variable)
     if (pInstruction instanceof IincInsnNode) {
-      IincInsnNode iincInsn = (IincInsnNode) pInstruction;
-      Type type = getLocalVariableType(pMethodNode, iincInsn.var, pInstruction);
-      // Use the same SlotVariable logic as above
-      class SlotVariable extends VariableImpl {
-        private final int slot;
-        public SlotVariable(Type t, int s) { super(t); this.slot = s; }
-        @Override
-        public String toString() { return super.toString() + "@slot" + slot; }
-        @Override
-        public int hashCode() { return super.hashCode() * 31 + slot; }
-        @Override
-        public boolean equals(Object obj) {
-          if (this == obj) return true;
-          if (obj == null || getClass() != obj.getClass()) return false;
-          SlotVariable other = (SlotVariable) obj;
-          return slot == other.slot && super.equals(obj);
+        IincInsnNode iincInsn = (IincInsnNode) pInstruction;
+        Type type = getLocalVariableType(pMethodNode, iincInsn.var, pInstruction);
+        usedVariables.add(new VariableImpl(type));
+    }
+
+    // Handle field access (uses the object reference)
+    if (pInstruction instanceof FieldInsnNode && 
+        (opcode == Opcodes.GETFIELD || opcode == Opcodes.PUTFIELD)) {
+        FieldInsnNode fieldInsn = (FieldInsnNode) pInstruction;
+        // The object whose field is being accessed is used
+        usedVariables.add(new VariableImpl(Type.getObjectType(fieldInsn.owner)));
+    }
+
+    // Handle method invocation (uses parameters)
+    if (pInstruction.getType() == AbstractInsnNode.METHOD_INSN) {
+        MethodInsnNode methodInsn = (MethodInsnNode) pInstruction;
+        Type[] argTypes = Type.getArgumentTypes(methodInsn.desc);
+        
+        // For non-static methods, add 'this' reference
+        if (opcode != Opcodes.INVOKESTATIC) {
+            usedVariables.add(new VariableImpl(Type.getObjectType(methodInsn.owner)));
         }
-      }
-      usedVariables.add(new SlotVariable(type, iincInsn.var));
+        
+        // Add parameters
+        for (Type argType : argTypes) {
+            usedVariables.add(new VariableImpl(argType));
+        }
     }
-    // Field instructions use the field
-    if (pInstruction instanceof FieldInsnNode &&
-        (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC)) {
-      FieldInsnNode fieldInsn = (FieldInsnNode) pInstruction;
-      Type fieldType = Type.getType(fieldInsn.desc);
-      usedVariables.add(new VariableImpl(fieldType));
+
+    // Handle array operations
+    if (opcode >= Opcodes.IALOAD && opcode <= Opcodes.SALOAD) {
+        // Array reference and index are used
+        usedVariables.add(new VariableImpl(Type.getType("Ljava/lang/Object;")));
+        usedVariables.add(new VariableImpl(Type.INT_TYPE));
     }
+
     return usedVariables;
-  }
+}
 
   /**
    * Provides the collection of {@link Variable}s that are defined by the given instruction.
