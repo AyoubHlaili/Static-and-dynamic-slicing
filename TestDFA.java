@@ -42,15 +42,20 @@ public class TestDFA {
                                 Collection<Variable> used = DataFlowAnalysis.usedBy(
                                     classNode.name, method, insn);
                                 
-                                System.out.println("  - Test Case · DFA_definedBy " + (index == 0 ? "" : "failed"));
+                                System.out.println("  - Test Case · DFA_definedBy " + (defined.size() > 0 ? "" : "failed"));
                                 System.out.println("    Instruction at index " + index + " " +
                                     (defined.size() > 0 ? "defines a variable." : "does not define a variable."));
-                                System.out.println("    Expected: " + (index == 0 ? "1" : "0") + ", but was: " + defined.size());
+                                if (index == 0) {
+                                    System.out.println("    expected: 0");
+                                } else {
+                                    System.out.println("    expected: 1");
+                                }
+                                System.out.println("    but was : " + defined.size());
                                 
-                                System.out.println("  - Test Case · DFA_usedBy " + (index == 10 ? "" : "failed"));
+                                System.out.println("  - Test Case · DFA_usedBy " + (used.size() > 0 ? "" : "failed"));
                                 System.out.println("    Instruction at index " + index + " " +
-                                    (used.size() == 0 ? "does not make use of a variable." : "makes use of variables."));
-                                System.out.println("    Expected to be " + (index == 10 ? "true" : "false"));
+                                    (used.size() == 0 ? "does not make use of a variable." : "makes use of a variable."));
+                                System.out.println("    expected to be " + (index == 10 ? "true" : "false"));
                                 
                                 for (Variable v : defined) {
                                     System.out.println("    Defined: " + v);
