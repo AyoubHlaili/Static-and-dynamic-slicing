@@ -5,7 +5,6 @@ import br.usp.each.saeg.asm.defuse.VariableImpl;
 import java.util.ArrayList;
 import java.util.Collection;
 import org.objectweb.asm.Opcodes;
-import static org.objectweb.asm.Opcodes.*;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.FieldInsnNode;
