@@ -22,11 +22,7 @@ public class SlicerUtil {
      * @param pPDG The program dependence graph to simplify.
      * @return The simplified program dependence graph.
      */
-    public static ProgramDependenceGraph simplify(final ProgramDependenceGraph pPDG) {
-        // Assume pPDG has a method getCoveredNodes() that returns the set of covered nodes
-        // If not, you will need to provide the set of covered nodes from your test execution
-        java.util.Set<de.uni_passau.fim.se2.sa.slicing.cfg.Node> coveredNodes = pPDG.getCoveredNodes();
-        
+    public static ProgramDependenceGraph simplify(final ProgramDependenceGraph pPDG, java.util.Set<de.uni_passau.fim.se2.sa.slicing.cfg.Node> coveredNodes) {
         // Create a new ProgramDependenceGraph containing only the covered nodes and edges between them
         de.uni_passau.fim.se2.sa.slicing.cfg.ProgramGraph originalGraph = pPDG.computeResult();
         de.uni_passau.fim.se2.sa.slicing.cfg.ProgramGraph reducedGraph = new de.uni_passau.fim.se2.sa.slicing.cfg.ProgramGraph();
