@@ -59,15 +59,9 @@ public class DataDependenceGraph extends Graph {
     }
     for (de.uni_passau.fim.se2.sa.slicing.cfg.Node node : cfg.getNodes()) {
       java.util.Set<String> killed = new java.util.HashSet<>();
-      // For each variable defined at other nodes (not this node), add to kill set
-      for (de.uni_passau.fim.se2.sa.slicing.cfg.Node n2 : cfg.getNodes()) {
-        if (n2 == node) continue;
-        for (String v : gen.get(n2)) {
-          if (gen.get(node).contains(v)) {
-            killed.add(v);
-          }
-        }
-      }
+      // KILL[n] = all variables defined at node n
+      // This kills all previous definitions of these variables
+      killed.addAll(gen.get(node));
       kill.put(node, killed);
     }
 
@@ -93,9 +87,10 @@ public class DataDependenceGraph extends Graph {
         for (String v : gen.get(node)) {
           outSet.add(new java.util.AbstractMap.SimpleEntry<>(v, node));
         }
-        // Add IN[n] minus killed
+        // Add IN[n] minus killed definitions
         for (java.util.Map.Entry<String, de.uni_passau.fim.se2.sa.slicing.cfg.Node> entry : inSet) {
-          if (!kill.get(node).contains(entry.getKey())) {
+          // Kill all previous definitions of variables that are redefined at this node
+          if (!gen.get(node).contains(entry.getKey())) {
             outSet.add(entry);
           }
         }
