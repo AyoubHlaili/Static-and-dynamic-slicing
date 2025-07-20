@@ -204,7 +204,7 @@ public class DataDependenceGraph extends Graph {
   private static boolean variablesEqual(Variable var1, Variable var2) {
     if (var1 == null && var2 == null) return true;
     if (var1 == null || var2 == null) return false;
-    // Use semantic comparison based on variable representation
-    return var1.toString().equals(var2.toString());
+    // Use identity comparison as required by VariableImpl
+    return var1 == var2;
   }
 }

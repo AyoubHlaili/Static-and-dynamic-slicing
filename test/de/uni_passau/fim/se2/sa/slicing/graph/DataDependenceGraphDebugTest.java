@@ -49,14 +49,16 @@ class DataDependenceGraphDebugTest {
             var usedVars = DataFlowAnalysis.usedBy(classNode.name, methodNode, node.getInstruction());
             
             if (!definedVars.isEmpty()) {
-                System.out.println("  Defines: " + definedVars.stream()
-                    .map(v -> v.toString())
-                    .reduce((a, b) -> a + ", " + b).orElse(""));
+                System.out.println("  Defines: ");
+                for (var v : definedVars) {
+                    System.out.println("    " + v.toString() + " [hash=" + v.hashCode() + ", identity=" + System.identityHashCode(v) + "]");
+                }
             }
             if (!usedVars.isEmpty()) {
-                System.out.println("  Uses: " + usedVars.stream()
-                    .map(v -> v.toString())
-                    .reduce((a, b) -> a + ", " + b).orElse(""));
+                System.out.println("  Uses: ");
+                for (var v : usedVars) {
+                    System.out.println("    " + v.toString() + " [hash=" + v.hashCode() + ", identity=" + System.identityHashCode(v) + "]");
+                }
             }
         }
         
