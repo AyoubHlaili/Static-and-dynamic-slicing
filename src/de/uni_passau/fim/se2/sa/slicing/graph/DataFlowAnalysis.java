@@ -64,7 +64,9 @@ public class DataFlowAnalysis {
       String pOwningClass, MethodNode pMethodNode, AbstractInsnNode pInstruction
   ) throws AnalyzerException {
     Collection<Variable> usedVariables = new ArrayList<>();
-    
+    if (pInstruction == null) {
+      return usedVariables;
+    }
     switch (pInstruction.getOpcode()) {
       // Handle variable loading instructions
       case Opcodes.ILOAD:
@@ -77,20 +79,20 @@ public class DataFlowAnalysis {
         break;
         
       // Handle ILOAD_0, ILOAD_1, etc.
-      case 26: case 27: case 28: case 29: // ILOAD_0 to ILOAD_3
-        usedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 26, Type.INT_TYPE));
+      case Opcodes.ILOAD_0: case Opcodes.ILOAD_1: case Opcodes.ILOAD_2: case Opcodes.ILOAD_3:
+        usedVariables.add(new IndexedVariable(pInstruction.getOpcode() - Opcodes.ILOAD_0, Type.INT_TYPE));
         break;
-      case 30: case 31: case 32: case 33: // LLOAD_0 to LLOAD_3
-        usedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 30, Type.LONG_TYPE));
+      case Opcodes.LLOAD_0: case Opcodes.LLOAD_1: case Opcodes.LLOAD_2: case Opcodes.LLOAD_3:
+        usedVariables.add(new IndexedVariable(pInstruction.getOpcode() - Opcodes.LLOAD_0, Type.LONG_TYPE));
         break;
-      case 34: case 35: case 36: case 37: // FLOAD_0 to FLOAD_3
-        usedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 34, Type.FLOAT_TYPE));
+      case Opcodes.FLOAD_0: case Opcodes.FLOAD_1: case Opcodes.FLOAD_2: case Opcodes.FLOAD_3:
+        usedVariables.add(new IndexedVariable(pInstruction.getOpcode() - Opcodes.FLOAD_0, Type.FLOAT_TYPE));
         break;
-      case 38: case 39: case 40: case 41: // DLOAD_0 to DLOAD_3
-        usedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 38, Type.DOUBLE_TYPE));
+      case Opcodes.DLOAD_0: case Opcodes.DLOAD_1: case Opcodes.DLOAD_2: case Opcodes.DLOAD_3:
+        usedVariables.add(new IndexedVariable(pInstruction.getOpcode() - Opcodes.DLOAD_0, Type.DOUBLE_TYPE));
         break;
-      case 42: case 43: case 44: case 45: // ALOAD_0 to ALOAD_3
-        usedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 42, Type.getType("Ljava/lang/Object;")));
+      case Opcodes.ALOAD_0: case Opcodes.ALOAD_1: case Opcodes.ALOAD_2: case Opcodes.ALOAD_3:
+        usedVariables.add(new IndexedVariable(pInstruction.getOpcode() - Opcodes.ALOAD_0, Type.getType("Ljava/lang/Object;")));
         break;
         
       // Handle field access (GETFIELD)
@@ -143,10 +145,13 @@ public class DataFlowAnalysis {
    * @throws AnalyzerException In case an error occurs during the analysis
    */
   public static Collection<Variable> definedBy(
+
       String pOwningClass, MethodNode pMethodNode, AbstractInsnNode pInstruction
   ) throws AnalyzerException {
     Collection<Variable> definedVariables = new ArrayList<>();
-    
+    if (pInstruction == null) {
+      return definedVariables;
+    }
     switch (pInstruction.getOpcode()) {
       // Handle variable storing instructions
       case Opcodes.ISTORE:
@@ -159,20 +164,20 @@ public class DataFlowAnalysis {
         break;
         
       // Handle ISTORE_0, ISTORE_1, etc.
-      case 59: case 60: case 61: case 62: // ISTORE_0 to ISTORE_3
-        definedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 59, Type.INT_TYPE));
+      case Opcodes.ISTORE_0: case Opcodes.ISTORE_1: case Opcodes.ISTORE_2: case Opcodes.ISTORE_3:
+        definedVariables.add(new IndexedVariable(pInstruction.getOpcode() - Opcodes.ISTORE_0, Type.INT_TYPE));
         break;
-      case 63: case 64: case 65: case 66: // LSTORE_0 to LSTORE_3
-        definedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 63, Type.LONG_TYPE));
+      case Opcodes.LSTORE_0: case Opcodes.LSTORE_1: case Opcodes.LSTORE_2: case Opcodes.LSTORE_3:
+        definedVariables.add(new IndexedVariable(pInstruction.getOpcode() - Opcodes.LSTORE_0, Type.LONG_TYPE));
         break;
-      case 67: case 68: case 69: case 70: // FSTORE_0 to FSTORE_3
-        definedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 67, Type.FLOAT_TYPE));
+      case Opcodes.FSTORE_0: case Opcodes.FSTORE_1: case Opcodes.FSTORE_2: case Opcodes.FSTORE_3:
+        definedVariables.add(new IndexedVariable(pInstruction.getOpcode() - Opcodes.FSTORE_0, Type.FLOAT_TYPE));
         break;
-      case 71: case 72: case 73: case 74: // DSTORE_0 to DSTORE_3
-        definedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 71, Type.DOUBLE_TYPE));
+      case Opcodes.DSTORE_0: case Opcodes.DSTORE_1: case Opcodes.DSTORE_2: case Opcodes.DSTORE_3:
+        definedVariables.add(new IndexedVariable(pInstruction.getOpcode() - Opcodes.DSTORE_0, Type.DOUBLE_TYPE));
         break;
-      case 75: case 76: case 77: case 78: // ASTORE_0 to ASTORE_3
-        definedVariables.add(new IndexedVariable(pInstruction.getOpcode() - 75, Type.getType("Ljava/lang/Object;")));
+      case Opcodes.ASTORE_0: case Opcodes.ASTORE_1: case Opcodes.ASTORE_2: case Opcodes.ASTORE_3:
+        definedVariables.add(new IndexedVariable(pInstruction.getOpcode() - Opcodes.ASTORE_0, Type.getType("Ljava/lang/Object;")));
         break;
         
       // Handle field access (PUTFIELD)
