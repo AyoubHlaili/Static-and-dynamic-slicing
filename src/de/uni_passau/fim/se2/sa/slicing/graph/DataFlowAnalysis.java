@@ -60,16 +60,6 @@ public class DataFlowAnalysis {
       usedVariables.add(new VariableImpl(fieldType));
     }
     
-    // Return instructions may use local variables or stack values
-    if (opcode >= Opcodes.IRETURN && opcode <= Opcodes.RETURN) {
-      // For simplicity, assume return instructions may use variables
-      // This is a conservative approximation
-    }
-    
-    // Method invocations and other instructions that use operand stack
-    // The operand stack values may come from local variables
-    // This is a simplified approach - a full implementation would need
-    // to track stack-to-local variable relationships
     return usedVariables;
   }
 
