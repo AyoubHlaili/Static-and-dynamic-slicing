@@ -31,7 +31,9 @@ public class DataFlowAnalysis {
       String pOwningClass, MethodNode pMethodNode, AbstractInsnNode pInstruction
   ) throws AnalyzerException {
     Collection<Variable> usedVariables = new ArrayList<>();
-    
+    if (pInstruction == null) {
+      return usedVariables;
+    }
     int opcode = pInstruction.getOpcode();
     // Local variable is used by load and iinc instructions
     if (opcode == Opcodes.ILOAD || opcode == Opcodes.LLOAD || opcode == Opcodes.FLOAD ||
@@ -72,7 +74,9 @@ public class DataFlowAnalysis {
       String pOwningClass, MethodNode pMethodNode, AbstractInsnNode pInstruction
   ) throws AnalyzerException {
     Collection<Variable> definedVariables = new ArrayList<>();
-    
+    if (pInstruction == null) {
+      return definedVariables;
+    }
     int opcode = pInstruction.getOpcode();
     // Local variable is defined by store and iinc instructions
     if (opcode == Opcodes.ISTORE || opcode == Opcodes.LSTORE || opcode == Opcodes.FSTORE ||

@@ -43,14 +43,56 @@ public class ProgramDependenceGraph extends Graph implements Sliceable<Node> {
    */
   @Override
   public ProgramGraph computeResult() {
-    // TODO Implement me
-    throw new UnsupportedOperationException("Implement me");
+    if (pdg != null) {
+      return pdg;
+    }
+    if (cdg == null && ddg == null) {
+      return null;
+    }
+    // Create a new ProgramGraph for the PDG
+    pdg = new ProgramGraph();
+    // Add all nodes from CDG (and DDG, which should be the same set)
+    for (Node node : cdg.getNodes()) {
+      pdg.addNode(node);
+    }
+    // Add all control dependence edges
+    for (Node src : cdg.getNodes()) {
+      for (Node tgt : cdg.getSuccessors(src)) {
+        pdg.addEdge(src, tgt);
+      }
+    }
+    // Add all data dependence edges
+    for (Node src : ddg.getNodes()) {
+      for (Node tgt : ddg.getSuccessors(src)) {
+        // Avoid duplicate edges (if already present from CDG)
+        if (!pdg.getSuccessors(src).contains(tgt)) {
+          pdg.addEdge(src, tgt);
+        }
+      }
+    }
+    return pdg;
   }
 
   /** {@inheritDoc} */
   @Override
   public Set<Node> backwardSlice(Node pCriterion) {
-    // TODO Implement me
-    throw new UnsupportedOperationException("Implement me");
+    ProgramGraph pdgGraph = computeResult();
+    Set<Node> slice = new java.util.HashSet<>();
+    if (pdgGraph == null || pCriterion == null) {
+      return slice;
+    }
+    // Worklist algorithm: traverse PDG backward from pCriterion
+    java.util.Deque<Node> worklist = new java.util.ArrayDeque<>();
+    worklist.add(pCriterion);
+    slice.add(pCriterion);
+    while (!worklist.isEmpty()) {
+      Node current = worklist.remove();
+      for (Node pred : pdgGraph.getPredecessors(current)) {
+        if (slice.add(pred)) {
+          worklist.add(pred);
+        }
+      }
+    }
+    return slice;
   }
 }
