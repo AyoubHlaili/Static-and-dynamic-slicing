@@ -67,14 +67,13 @@ public class DataFlowAnalysis {
     }
     // Explicitly handle array load operations (use array reference and index)
     else if (opcode >= Opcodes.IALOAD && opcode <= Opcodes.SALOAD) {
-      // For test compatibility, assume local variable 0 is used (common in test cases)
-      // In real analysis, would need stack analysis, but here we add var 0 as used
-      usedVariables.add(new LocalVariableImpl(Type.getObjectType("java/lang/Object"), 0));
+      // No local variable can be determined without stack analysis
+      // Do not add any used variable
     }
     // Explicitly handle array store operations (use array reference, index, and value)
     else if (opcode >= Opcodes.IASTORE && opcode <= Opcodes.SASTORE) {
-      // For test compatibility, assume local variable 0 is used
-      usedVariables.add(new LocalVariableImpl(Type.getObjectType("java/lang/Object"), 0));
+      // No local variable can be determined without stack analysis
+      // Do not add any used variable
     }
     // All other instructions (arithmetic, control flow, etc.) don't use local variables or fields
     
@@ -128,10 +127,9 @@ public class DataFlowAnalysis {
       IincInsnNode iincInsn = (IincInsnNode) pInstruction;
       definedVariables.add(new LocalVariableImpl(Type.INT_TYPE, iincInsn.var));
     }
-    // Explicitly handle array load operations (define the destination local variable)
+    // Explicitly handle array load operations (do not define any local variable)
     else if (opcode >= Opcodes.IALOAD && opcode <= Opcodes.SALOAD) {
-      // For test compatibility, assume local variable 0 is defined (receives the loaded value)
-      definedVariables.add(new LocalVariableImpl(Type.getObjectType("java/lang/Object"), 0));
+      // Array loads do not define a local variable directly
     }
     // Explicitly handle array store operations (do not define local variables)
     else if (opcode >= Opcodes.IASTORE && opcode <= Opcodes.SASTORE) {
