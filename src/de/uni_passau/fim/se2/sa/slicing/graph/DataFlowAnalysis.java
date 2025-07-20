@@ -35,29 +35,41 @@ public class DataFlowAnalysis {
       return usedVariables;
     }
     int opcode = pInstruction.getOpcode();
-    // Local variable is used by load and iinc instructions
-    if (opcode == Opcodes.ILOAD || opcode == Opcodes.LLOAD || opcode == Opcodes.FLOAD ||
-        opcode == Opcodes.DLOAD || opcode == Opcodes.ALOAD || opcode == Opcodes.IINC) {
-      int varIdx;
-      if (pInstruction instanceof VarInsnNode) {
-        varIdx = ((VarInsnNode) pInstruction).var;
-      } else if (pInstruction instanceof IincInsnNode) {
-        varIdx = ((IincInsnNode) pInstruction).var;
-      } else {
-        varIdx = -1;
-      }
-      if (varIdx >= 0) {
-        Type type = getLocalVariableType(pMethodNode, varIdx, pInstruction);
-        usedVariables.add(new VariableImpl(type));
-      }
+    
+    // Local variable load instructions - use local variables
+    if (pInstruction instanceof VarInsnNode && 
+        (opcode == Opcodes.ILOAD || opcode == Opcodes.LLOAD || opcode == Opcodes.FLOAD ||
+         opcode == Opcodes.DLOAD || opcode == Opcodes.ALOAD)) {
+      VarInsnNode varInsn = (VarInsnNode) pInstruction;
+      Type type = getLocalVariableType(pMethodNode, varInsn.var, pInstruction);
+      usedVariables.add(new VariableImpl(type));
     }
+    
+    // Increment instruction - uses local variable
+    if (pInstruction instanceof IincInsnNode) {
+      IincInsnNode iincInsn = (IincInsnNode) pInstruction;
+      Type type = getLocalVariableType(pMethodNode, iincInsn.var, pInstruction);
+      usedVariables.add(new VariableImpl(type));
+    }
+    
     // Field instructions use the field
-    if (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
+    if (pInstruction instanceof FieldInsnNode && 
+        (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC)) {
       FieldInsnNode fieldInsn = (FieldInsnNode) pInstruction;
       Type fieldType = Type.getType(fieldInsn.desc);
       usedVariables.add(new VariableImpl(fieldType));
     }
-    // (Array loads, method calls, etc. can be added as needed)
+    
+    // Return instructions may use local variables or stack values
+    if (opcode >= Opcodes.IRETURN && opcode <= Opcodes.RETURN) {
+      // For simplicity, assume return instructions may use variables
+      // This is a conservative approximation
+    }
+    
+    // Method invocations and other instructions that use operand stack
+    // The operand stack values may come from local variables
+    // This is a simplified approach - a full implementation would need
+    // to track stack-to-local variable relationships
     return usedVariables;
   }
 
@@ -77,30 +89,56 @@ public class DataFlowAnalysis {
     if (pInstruction == null) {
       return definedVariables;
     }
-    int opcode = pInstruction.getOpcode();
-    // Local variable is defined by store and iinc instructions
-    if (opcode == Opcodes.ISTORE || opcode == Opcodes.LSTORE || opcode == Opcodes.FSTORE ||
-        opcode == Opcodes.DSTORE || opcode == Opcodes.ASTORE || opcode == Opcodes.IINC) {
-      int varIdx;
-      if (pInstruction instanceof VarInsnNode) {
-        varIdx = ((VarInsnNode) pInstruction).var;
-      } else if (pInstruction instanceof IincInsnNode) {
-        varIdx = ((IincInsnNode) pInstruction).var;
-      } else {
-        varIdx = -1;
+    
+    // Check if this is the first instruction (method entry) - parameters are defined here
+    boolean isFirstInstruction = pMethodNode.instructions.getFirst() == pInstruction;
+    if (isFirstInstruction) {
+      // Add method parameters as defined variables
+      Type[] argumentTypes = Type.getArgumentTypes(pMethodNode.desc);
+      
+      // For non-static methods, 'this' is parameter 0
+      if ((pMethodNode.access & Opcodes.ACC_STATIC) == 0) {
+        Type thisType = Type.getObjectType(pOwningClass);
+        definedVariables.add(new VariableImpl(thisType));
       }
-      if (varIdx >= 0) {
-        Type type = getLocalVariableType(pMethodNode, varIdx, pInstruction);
-        definedVariables.add(new VariableImpl(type));
+      
+      // Add actual method parameters
+      for (Type argType : argumentTypes) {
+        definedVariables.add(new VariableImpl(argType));
       }
     }
+    
+    int opcode = pInstruction.getOpcode();
+    
+    // Local variable store instructions - define local variables
+    if (pInstruction instanceof VarInsnNode && 
+        (opcode == Opcodes.ISTORE || opcode == Opcodes.LSTORE || opcode == Opcodes.FSTORE ||
+         opcode == Opcodes.DSTORE || opcode == Opcodes.ASTORE)) {
+      VarInsnNode varInsn = (VarInsnNode) pInstruction;
+      Type type = getLocalVariableType(pMethodNode, varInsn.var, pInstruction);
+      definedVariables.add(new VariableImpl(type));
+    }
+    
+    // Increment instruction - defines local variable
+    if (pInstruction instanceof IincInsnNode) {
+      IincInsnNode iincInsn = (IincInsnNode) pInstruction;
+      Type type = getLocalVariableType(pMethodNode, iincInsn.var, pInstruction);
+      definedVariables.add(new VariableImpl(type));
+    }
+    
     // Field instructions define the field
-    if (opcode == Opcodes.PUTFIELD || opcode == Opcodes.PUTSTATIC) {
+    if (pInstruction instanceof FieldInsnNode && 
+        (opcode == Opcodes.PUTFIELD || opcode == Opcodes.PUTSTATIC)) {
       FieldInsnNode fieldInsn = (FieldInsnNode) pInstruction;
       Type fieldType = Type.getType(fieldInsn.desc);
       definedVariables.add(new VariableImpl(fieldType));
     }
-    // (Array stores, etc. can be added as needed)
+    
+    // Method parameters are implicitly defined at method entry
+    // This would need special handling for the first instruction
+    
+    // Array store instructions could define array elements
+    // But this requires more complex analysis to track array references
     return definedVariables;
   }
   
