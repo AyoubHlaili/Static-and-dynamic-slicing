@@ -51,8 +51,11 @@ public class ProgramDependenceGraph extends Graph implements Sliceable<Node> {
     }
     // Create a new ProgramGraph for the PDG
     pdg = new ProgramGraph();
-    // Add all nodes from CDG (and DDG, which should be the same set)
-    for (Node node : cdg.getNodes()) {
+    // Add all nodes from both CDG and DDG (union)
+    java.util.Set<Node> allNodes = new java.util.HashSet<>();
+    allNodes.addAll(cdg.getNodes());
+    allNodes.addAll(ddg.getNodes());
+    for (Node node : allNodes) {
       pdg.addNode(node);
     }
     // Add all control dependence edges
