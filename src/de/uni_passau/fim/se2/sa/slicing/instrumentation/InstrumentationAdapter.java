@@ -18,8 +18,19 @@ class InstrumentationAdapter extends ClassVisitor {
     return new MethodVisitor(api, mv) {
       @Override
       public void visitLineNumber(int pLine, Label pStart) {
-        // TODO Implement me
-        throw new UnsupportedOperationException("Implement me");
+        // Call the original visitLineNumber to preserve debug information
+        super.visitLineNumber(pLine, pStart);
+        
+        // Inject call to CoverageTracker.trackLineVisit(pLine)
+        // This generates: CoverageTracker.trackLineVisit(pLine);
+        mv.visitLdcInsn(pLine); // Push the line number onto the stack
+        mv.visitMethodInsn(
+            org.objectweb.asm.Opcodes.INVOKESTATIC,
+            "de/uni_passau/fim/se2/sa/slicing/coverage/CoverageTracker",
+            "trackLineVisit",
+            "(I)V",
+            false
+        );
       }
     };
   }

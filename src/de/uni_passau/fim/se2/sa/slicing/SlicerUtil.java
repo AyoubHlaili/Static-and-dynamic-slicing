@@ -32,15 +32,19 @@ public class SlicerUtil {
         // Get the original PDG
         de.uni_passau.fim.se2.sa.slicing.cfg.ProgramGraph originalGraph = pPDG.computeResult();
         
-        // In a real implementation, you would need to:
-        // 1. Instrument the code or use a coverage tool to track executed nodes
-        // 2. Run the test and collect the set of covered nodes
-        // For now, we'll assume all nodes are covered (no reduction)
-        // This is a placeholder implementation
+        // Get the visited lines from the coverage tracker
+        java.util.Set<Integer> visitedLines = de.uni_passau.fim.se2.sa.slicing.coverage.CoverageTracker.getVisitedLines();
         
+        // Filter nodes based on coverage: only keep nodes whose line numbers were visited
         java.util.Set<de.uni_passau.fim.se2.sa.slicing.cfg.Node> coveredNodes = new java.util.HashSet<>();
         if (originalGraph != null) {
-            coveredNodes.addAll(originalGraph.getNodes());
+            for (de.uni_passau.fim.se2.sa.slicing.cfg.Node node : originalGraph.getNodes()) {
+                // Check if this node's line number was covered during execution
+                int lineNumber = node.getLineNumber();
+                if (lineNumber > 0 && visitedLines.contains(lineNumber)) {
+                    coveredNodes.add(node);
+                }
+            }
         }
         
         // Create a new reduced PDG containing only covered nodes and their edges

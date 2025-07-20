@@ -22,8 +22,16 @@ public class LineCoverageTransformer implements ClassFileTransformer {
       return pClassFileBuffer;
     }
 
-    // TODO Implement me
-    throw new UnsupportedOperationException("Implement me");
+    try {
+      org.objectweb.asm.ClassReader cr = new org.objectweb.asm.ClassReader(pClassFileBuffer);
+      org.objectweb.asm.ClassWriter cw = new org.objectweb.asm.ClassWriter(cr, org.objectweb.asm.ClassWriter.COMPUTE_FRAMES);
+      org.objectweb.asm.ClassVisitor cv = new InstrumentationAdapter(org.objectweb.asm.Opcodes.ASM9, cw);
+      cr.accept(cv, 0);
+      return cw.toByteArray();
+    } catch (Exception e) {
+      e.printStackTrace();
+      return pClassFileBuffer; // fallback to original if instrumentation fails
+    }
   }
 
   private boolean isIgnored(String pClassName) {
