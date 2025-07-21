@@ -74,36 +74,5 @@ public class GraphTest {
         expected.put("C", java.util.Arrays.asList("B"));
         expected.put("A", java.util.Collections.emptyList());
         org.junit.jupiter.api.Assertions.assertEquals(expected, reversed.getCFG());
-
-// DummyGraph is a simple concrete implementation for testing purposes
-class DummyGraph {
-    private final java.util.Map<String, java.util.List<String>> adj = new java.util.HashMap<>();
-    void addEdge(String from, String to) {
-        adj.computeIfAbsent(from, k -> new java.util.ArrayList<>()).add(to);
-        adj.putIfAbsent(to, new java.util.ArrayList<>());
-    }
-    java.util.List<String> computeResult() {
-        // Return nodes in insertion order for test
-        java.util.Set<String> visited = new java.util.LinkedHashSet<>();
-        for (String from : adj.keySet()) {
-            visited.add(from);
-            for (String to : adj.get(from)) visited.add(to);
-        }
-        return new java.util.ArrayList<>(visited);
-    }
-    java.util.Map<String, java.util.List<String>> getCFG() {
-        return adj;
-    }
-    DummyGraph reverseGraph() {
-        DummyGraph rev = new DummyGraph();
-        for (String from : adj.keySet()) {
-            for (String to : adj.get(from)) {
-                rev.addEdge(to, from);
-            }
-            if (adj.get(from).isEmpty()) rev.adj.putIfAbsent(from, new java.util.ArrayList<>());
-        }
-        return rev;
-    }
-}
     }
 }
